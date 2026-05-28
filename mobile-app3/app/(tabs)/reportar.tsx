@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, FlatList } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 // Colores extraídos de la Web-App
@@ -30,7 +30,7 @@ const INCIDENT_OPTIONS: IncidentOption[] = [
 export default function ReportScreen() {
   const [selectedIncident, setSelectedIncident] = useState<IncidentOption | null>(null);
   const [description, setDescription] = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleSubmit = () => {
     if (!selectedIncident || !description) {
@@ -40,6 +40,7 @@ export default function ReportScreen() {
     Alert.alert('Éxito', 'Reporte enviado correctamente.');
     setSelectedIncident(null);
     setDescription('');
+    setIsDropdownOpen(false);
   };
 
   return (
@@ -47,10 +48,10 @@ export default function ReportScreen() {
       <Text style={styles.title}>Nuevo Reporte</Text>
       
       <Text style={styles.label}>Tipo de Incidente</Text>
-      {/* Dropdown Customizado */}
+      {/* Dropdown Customizado Inline */}
       <TouchableOpacity 
-        style={styles.dropdownButton} 
-        onPress={() => setModalVisible(true)}
+        style={[styles.dropdownButton, isDropdownOpen && styles.dropdownButtonOpen]} 
+        onPress={() => setIsDropdownOpen(!isDropdownOpen)}
       >
         {selectedIncident ? (
           <View style={styles.dropdownButtonContent}>
@@ -60,8 +61,30 @@ export default function ReportScreen() {
         ) : (
           <Text style={styles.dropdownTextPlaceholder}>Selecciona una opción...</Text>
         )}
-        <Ionicons name="chevron-down" size={20} color={WebColors.foreground} />
+        <Ionicons name={isDropdownOpen ? "chevron-up" : "chevron-down"} size={20} color={WebColors.foreground} />
       </TouchableOpacity>
+
+      {/* Lista de opciones desplegada directamente, sin oscurecer pantalla */}
+      {isDropdownOpen && (
+        <View style={styles.inlineDropdownList}>
+          {INCIDENT_OPTIONS.map((item, index) => (
+            <TouchableOpacity 
+              key={item.id}
+              style={[
+                styles.optionItem, 
+                index === INCIDENT_OPTIONS.length - 1 && { borderBottomWidth: 0 }
+              ]}
+              onPress={() => {
+                setSelectedIncident(item);
+                setIsDropdownOpen(false);
+              }}
+            >
+              <Ionicons name={item.iconName} size={20} color={WebColors.primary} style={styles.optionIcon} />
+              <Text style={styles.optionText}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       <Text style={styles.label}>Descripción</Text>
       <TextInput
@@ -79,39 +102,6 @@ export default function ReportScreen() {
         <Text style={styles.submitButtonTextOutline}>Enviar Reporte</Text>
       </TouchableOpacity>
 
-      <Modal
-        visible={modalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setModalVisible(false)}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Selecciona el incidente</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color={WebColors.foreground} />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={INCIDENT_OPTIONS}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={styles.optionItem}
-                  onPress={() => {
-                    setSelectedIncident(item);
-                    setModalVisible(false);
-                  }}
-                >
-                  <Ionicons name={item.iconName} size={24} color={WebColors.primary} style={styles.optionIcon} />
-                  <Text style={styles.optionText}>{item.label}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </ScrollView>
   );
 }
@@ -160,6 +150,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  dropdownButtonOpen: {
+    marginBottom: 0,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  inlineDropdownList: {
+    backgroundColor: WebColors.surface,
+    borderWidth: 1,
+    borderColor: WebColors.border,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    marginBottom: 24,
+    overflow: 'hidden',
+  },
   dropdownButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -182,45 +187,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
     borderWidth: 2,
-    borderColor: WebColors.primary, // Contorno color guinda
+    borderColor: WebColors.primary,
   },
   submitButtonTextOutline: {
     color: WebColors.primary,
     fontSize: 18,
     fontWeight: 'bold',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: WebColors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '70%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: WebColors.foreground,
-  },
   optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: WebColors.border,
   },
   optionIcon: {
-    marginRight: 15,
+    marginRight: 12,
   },
   optionText: {
     fontSize: 16,

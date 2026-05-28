@@ -3,18 +3,23 @@ import React from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from 'react-native';
+// Colores de la Web-App
+const WebColors = {
+  background: '#F7F4EF',
+  primary: '#7A1F2B',     // Guinda (activo)
+  inactive: '#B08A57',    // Beige oscuro (inactivo)
+  border: 'rgba(58, 58, 58, 0.18)',
+};
 
 export default function TabLayout() {
-  const theme = useColorScheme() === 'dark' ? 'dark' : 'light';
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[theme].tint,
-        tabBarInactiveTintColor: Colors[theme].tabIconDefault,
+        tabBarActiveTintColor: WebColors.primary,
+        tabBarInactiveTintColor: WebColors.inactive,
         tabBarStyle: {
-          backgroundColor: Colors[theme].surface,
-          borderTopColor: Colors[theme].border,
+          backgroundColor: WebColors.background,
+          borderTopColor: WebColors.border,
         },
         headerShown: false,
       }}>

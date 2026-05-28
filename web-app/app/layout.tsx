@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Navbar } from "@/components/Navbar";
+import { AuthProvider } from "@/context/AuthContext";
+import { AppShell } from "@/components/auth/AppShell";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,12 +16,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="gov-page">
-        <Navbar />
-        <main
-          className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-8 pt-20 lg:pt-8 pl-4 sm:pl-6 md:pl-[calc(var(--sidebar-width)+2rem)]"
-        >
-          {children}
-        </main>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
       </body>
     </html>
   );

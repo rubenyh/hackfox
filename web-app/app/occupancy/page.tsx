@@ -1,5 +1,6 @@
 "use client";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { DataTable } from "@/components/DataTable";
 import { mockOccupancy } from "@/lib/mockData";
 import {
@@ -43,7 +44,8 @@ export default function OccupancyPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <ProtectedRoute>
+      <div className="space-y-8">
       <div>
         <h2 className="text-3xl font-bold gov-text-tertiary">Análisis de Ocupación</h2>
         <p className="gov-text-muted mt-1">Densidad de viajeros por hora en rutas principales</p>
@@ -81,6 +83,7 @@ export default function OccupancyPage() {
         <h3 className="text-xl font-bold gov-text-tertiary">Datos Detallados de Ocupación</h3>
         <DataTable data={tableData} columns={columns} />
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

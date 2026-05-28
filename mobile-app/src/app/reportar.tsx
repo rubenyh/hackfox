@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function MapScreen() {
+export default function ReportScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Pantalla de Mapa en Vivo (Expo Router)</Text>
+      <Text style={styles.text}>Pantalla de Reportar (Expo Router)</Text>
     </View>
   );
 }
@@ -22,4 +22,3 @@ const styles = StyleSheet.create({
     color: '#333',
   },
 });
-

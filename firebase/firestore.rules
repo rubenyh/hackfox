@@ -1,18 +1,74 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return isSignedIn() ? request.auth.token.role : null;
+    }
+
+    function isAdmin() {
+      return role() == 'admin';
+    }
+
+    function isDriver() {
+      return role() == 'driver';
+    }
+
+    function isUser() {
+      return role() == 'user';
+    }
+
+    function isValidDriverLocation() {
+      return request.resource.data.keys().hasOnly(['lat', 'lng', 'updatedAt'])
+        && request.resource.data.lat is number
+        && request.resource.data.lng is number
+        && request.resource.data.lat >= -90
+        && request.resource.data.lat <= 90
+        && request.resource.data.lng >= -180
+        && request.resource.data.lng <= 180
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    function isValidReportCreate() {
+      return request.resource.data.keys().hasOnly(['userId', 'description', 'createdAt', 'status'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 2000
+        && request.resource.data.createdAt is timestamp
+        && (!('status' in request.resource.data) || request.resource.data.status == 'new');
+    }
+
+    match /users/{uid} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == resource.data.uid);
+      allow delete: if isAdmin();
+    }
+
+    match /driverLocations/{driverId} {
+      allow read: if isSignedIn();
+      allow create, update: if isValidDriverLocation()
+        && (isAdmin() || (isDriver() && request.auth.uid == driverId));
+      allow delete: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && request.auth.uid == resource.data.userId);
+      allow create: if (isUser() && isValidReportCreate()) || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 6, 27);
+      allow read, write: if false;
     }
   }
 }

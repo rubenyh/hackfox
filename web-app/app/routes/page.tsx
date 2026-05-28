@@ -1,6 +1,5 @@
 "use client";
 
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { DataTable } from "@/components/DataTable";
 import { mockRoutes } from "@/lib/mockData";
 import { useState } from "react";
@@ -37,8 +36,7 @@ export default function RoutesPage() {
   ];
 
   return (
-    <ProtectedRoute>
-      <div className="space-y-8">
+    <div className="space-y-8">
       <div>
         <h2 className="text-3xl font-bold gov-text-tertiary">Estadísticas de Rutas</h2>
         <p className="gov-text-muted mt-1">Detalles de todas las rutas de transporte</p>
@@ -51,7 +49,6 @@ export default function RoutesPage() {
         sortKey={sortKey}
         sortDirection={sortDir}
       />
-      </div>
-    </ProtectedRoute>
+    </div>
   );
 }

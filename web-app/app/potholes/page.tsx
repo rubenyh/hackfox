@@ -1,6 +1,5 @@
 "use client";
 
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { DataTable } from "@/components/DataTable";
 import { KPICard } from "@/components/KPICard";
 import { mockPotholes } from "@/lib/mockData";
@@ -35,8 +34,7 @@ export default function PotholesPage() {
   ];
 
   return (
-    <ProtectedRoute>
-      <div className="space-y-8">
+    <div className="space-y-8">
       <div>
         <h2 className="text-3xl font-bold gov-text-tertiary">Análisis de Baches</h2>
         <p className="gov-text-muted mt-1">Monitoreo de las rutas afectadas por daño vial</p>
@@ -68,7 +66,6 @@ export default function PotholesPage() {
           columns={columns}
         />
       </div>
-      </div>
-    </ProtectedRoute>
+    </div>
   );
 }

@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { useAuthHandlers } from "@/hooks/useAuthHandlers";
 import {
   Activity,
   TrendingUp,
@@ -25,9 +23,6 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { user, loading } = useAuth();
-  const { handleSignOut } = useAuthHandlers();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -49,15 +44,6 @@ export function Navbar() {
   }, [isMobileOpen]);
 
   const closeMobile = () => setIsMobileOpen(false);
-  const displayName = user?.displayName || "Administrador";
-  const displayEmail = user?.email || "Cuenta sin correo";
-
-  const onSignOut = async () => {
-    const success = await handleSignOut();
-    if (success) {
-      router.replace("/login");
-    }
-  };
 
   return (
     <>
@@ -156,18 +142,12 @@ export function Navbar() {
           <div className="flex items-center gap-3 rounded-2xl bg-white/5 px-3 py-2">
             <UserCircle size={20} className="text-white/70" />
             <div className={`${isCollapsed ? "sr-only" : "block"}`}>
-              <p className="text-sm font-semibold text-white">
-                {loading ? "Cargando..." : displayName}
-              </p>
-              <p className="text-xs text-white/60">
-                {loading ? "" : displayEmail}
-              </p>
+              <p className="text-sm font-semibold text-white">name_placeholder</p>
+              <p className="text-xs text-white/60">email_placeholder</p>
             </div>
           </div>
           <button
             type="button"
-            onClick={onSignOut}
-            disabled={loading}
             className={`mt-3 flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 ${
               isCollapsed ? "justify-center" : ""}
             `}

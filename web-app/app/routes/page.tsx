@@ -38,8 +38,8 @@ export default function RoutesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-3xl font-bold text-gray-900">Estadísticas de Rutas</h2>
-        <p className="text-gray-600 mt-1">Detalles de todas las rutas de transporte</p>
+        <h2 className="text-3xl font-bold gov-text-tertiary">Estadísticas de Rutas</h2>
+        <p className="gov-text-muted mt-1">Detalles de todas las rutas de transporte</p>
       </div>
 
       <DataTable

@@ -24,14 +24,14 @@ export function DataTable<T>({
   sortDirection,
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto bg-white rounded-lg border border-blue-200 shadow-md">
+    <div className="overflow-x-auto gov-card">
       <table className="w-full">
-        <thead className="bg-blue-50 border-b border-blue-200">
+        <thead className="gov-table-head border-b gov-border">
           <tr>
             {columns.map((col) => (
               <th
                 key={String(col.key)}
-                className={`px-6 py-3 text-left text-sm font-semibold text-gray-900 ${col.width || ""}`}
+                className={`px-6 py-3 text-left text-sm font-semibold gov-text-tertiary ${col.width || ""}`}
               >
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => col.sortable && onSort?.(col.key)}>
                   {col.label}
@@ -43,11 +43,11 @@ export function DataTable<T>({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-blue-100">
+        <tbody className="gov-divide-y">
           {data.map((row, idx) => (
-            <tr key={idx} className="hover:bg-blue-50 transition-colors">
+            <tr key={idx} className="gov-table-row transition-colors">
               {columns.map((col) => (
-                <td key={String(col.key)} className="px-6 py-4 text-sm text-gray-700">
+                <td key={String(col.key)} className="px-6 py-4 text-sm gov-text-muted">
                   {col.render ? col.render((row as any)[col.key]) : (row as any)[col.key]}
                 </td>
               ))}

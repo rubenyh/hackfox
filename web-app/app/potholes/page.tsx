@@ -18,12 +18,12 @@ export default function PotholesPage() {
       label: "Severidad",
       render: (value: string) => (
         <span
-          className={`px-3 py-1 rounded-full text-xs font-medium ${
+          className={`px-3 py-1 text-xs gov-badge ${
             value === "high"
-              ? "bg-red-100 text-red-800"
+              ? "gov-badge-high"
               : value === "medium"
-              ? "bg-yellow-100 text-yellow-800"
-              : "bg-green-100 text-green-800"
+              ? "gov-badge-medium"
+              : "gov-badge-low"
           }`}
         >
           {value === "high" ? "Alta" : value === "medium" ? "Media" : "Baja"}
@@ -36,8 +36,8 @@ export default function PotholesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-3xl font-bold text-gray-900">Análisis de Baches</h2>
-        <p className="text-gray-600 mt-1">Monitoreo de las rutas afectadas por daño vial</p>
+        <h2 className="text-3xl font-bold gov-text-tertiary">Análisis de Baches</h2>
+        <p className="gov-text-muted mt-1">Monitoreo de las rutas afectadas por daño vial</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -50,17 +50,17 @@ export default function PotholesPage() {
           label="Rutas Críticas"
           value={highSeverity}
           change={-2}
-          icon={<AlertTriangle size={24} className="text-red-500" />}
+          icon={<AlertTriangle size={24} className="gov-text-primary" />}
         />
         <KPICard
           label="Rutas con Severidad Media"
           value={mediumSeverity}
-          icon={<AlertTriangle size={24} className="text-yellow-500" />}
+          icon={<AlertTriangle size={24} className="gov-text-accent" />}
         />
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-xl font-bold text-gray-900">Rutas Ordenadas por Cantidad de Baches</h3>
+        <h3 className="text-xl font-bold gov-text-tertiary">Rutas Ordenadas por Cantidad de Baches</h3>
         <DataTable
           data={mockPotholes.sort((a, b) => b.potholesCount - a.potholesCount)}
           columns={columns}

@@ -7,18 +7,22 @@ interface KPICardProps {
 
 export function KPICard({ label, value, change, icon }: KPICardProps) {
   return (
-    <div className="bg-white rounded-lg border border-blue-200 p-6 shadow-md hover:shadow-lg transition-shadow">
+    <div className="gov-card p-6 transition-shadow">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600">{label}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+          <p className="text-sm font-medium gov-text-muted">{label}</p>
+          <p className="text-3xl font-bold gov-text-tertiary mt-2">{value}</p>
           {change !== undefined && (
-            <p className={`text-sm mt-2 font-semibold ${change >= 0 ? "text-red-600" : "text-green-600"}`}>
+            <p
+              className={`text-sm mt-2 font-semibold ${
+                change >= 0 ? "gov-text-success" : "gov-text-primary"
+              }`}
+            >
               {change >= 0 ? "↑" : "↓"} {Math.abs(change)}% vs semana anterior
             </p>
           )}
         </div>
-        {icon && <div className="text-blue-500">{icon}</div>}
+        {icon && <div className="gov-text-accent">{icon}</div>}
       </div>
     </div>
   );

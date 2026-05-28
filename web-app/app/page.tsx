@@ -30,8 +30,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-3xl font-bold text-gray-900">Dashboard General</h2>
-        <p className="text-gray-600 mt-1">Resumen de estadísticas del transporte público</p>
+        <h2 className="text-3xl font-bold gov-text-tertiary">Dashboard General</h2>
+        <p className="gov-text-muted mt-1">Resumen de estadísticas del transporte público</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -61,12 +61,12 @@ export default function Dashboard() {
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-xl font-bold text-gray-900">Rutas Principales</h3>
+        <h3 className="text-xl font-bold gov-text-tertiary">Rutas Principales</h3>
         <DataTable data={mockRoutes} columns={routeColumns} />
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-xl font-bold text-gray-900">Rutas con Más Baches</h3>
+        <h3 className="text-xl font-bold gov-text-tertiary">Rutas con Más Baches</h3>
         <DataTable
           data={mockPotholes.slice(0, 5)}
           columns={[
@@ -77,12 +77,12 @@ export default function Dashboard() {
               label: "Severidad",
               render: (value: string) => (
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  className={`px-3 py-1 text-xs gov-badge ${
                     value === "high"
-                      ? "bg-red-100 text-red-800"
+                      ? "gov-badge-high"
                       : value === "medium"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-green-100 text-green-800"
+                      ? "gov-badge-medium"
+                      : "gov-badge-low"
                   }`}
                 >
                   {value === "high" ? "Alta" : value === "medium" ? "Media" : "Baja"}

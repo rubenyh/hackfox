@@ -45,15 +45,15 @@ export default function OccupancyPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-3xl font-bold text-gray-900">Análisis de Ocupación</h2>
-        <p className="text-gray-600 mt-1">Densidad de viajeros por hora en rutas principales</p>
+        <h2 className="text-3xl font-bold gov-text-tertiary">Análisis de Ocupación</h2>
+        <p className="gov-text-muted mt-1">Densidad de viajeros por hora en rutas principales</p>
       </div>
 
-      <div className="bg-white rounded-lg border border-blue-200 p-6 shadow-md">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Ocupación Diaria - Ruta Centro - Norte</h3>
+      <div className="gov-card p-6">
+        <h3 className="text-lg font-semibold gov-text-tertiary mb-4">Ocupación Diaria - Ruta Centro - Norte</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#D6CABB" />
             <XAxis dataKey="hour" />
             <YAxis />
             <Tooltip />
@@ -61,14 +61,14 @@ export default function OccupancyPage() {
             <Line
               type="monotone"
               dataKey="people"
-              stroke="#2563eb"
+              stroke="#7A1F2B"
               name="Personas a bordo"
               strokeWidth={2}
             />
             <Line
               type="monotone"
               dataKey="capacity"
-              stroke="#cbd5e1"
+              stroke="#B08A57"
               name="Capacidad"
               strokeWidth={2}
               strokeDasharray="5 5"
@@ -78,7 +78,7 @@ export default function OccupancyPage() {
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-xl font-bold text-gray-900">Datos Detallados de Ocupación</h3>
+        <h3 className="text-xl font-bold gov-text-tertiary">Datos Detallados de Ocupación</h3>
         <DataTable data={tableData} columns={columns} />
       </div>
     </div>

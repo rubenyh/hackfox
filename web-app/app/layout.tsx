@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className="bg-blue-50 text-gray-900">
+      <body className="gov-page">
         <Navbar />
         <main className="max-w-7xl mx-auto px-6 py-8">
           {children}

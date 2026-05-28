@@ -25,15 +25,20 @@ export default function OccupancyPage() {
     { hour: "20:00", people: 42, capacity: 80 },
   ];
 
+  const tableData = mockOccupancy.map(item => ({
+    ...item,
+    occupancy: Math.round((item.averagePeople / item.capacity) * 100)
+  }));
+
   const columns = [
     { key: "routeName" as const, label: "Ruta" },
     { key: "hour" as const, label: "Hora", render: (h: number) => `${h}:00` },
     { key: "averagePeople" as const, label: "Personas" },
     { key: "capacity" as const, label: "Capacidad" },
     {
-      key: "averagePeople" as const,
+      key: "occupancy" as const,
       label: "Ocupación (%)",
-      render: (val: number, row: any) => `${Math.round((val / row.capacity) * 100)}%`,
+      render: (val: number) => `${val}%`,
     },
   ];
 
@@ -44,11 +49,11 @@ export default function OccupancyPage() {
         <p className="text-gray-600 mt-1">Densidad de viajeros por hora en rutas principales</p>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+      <div className="bg-white rounded-lg border border-blue-200 p-6 shadow-md">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Ocupación Diaria - Ruta Centro - Norte</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
             <XAxis dataKey="hour" />
             <YAxis />
             <Tooltip />
@@ -56,14 +61,14 @@ export default function OccupancyPage() {
             <Line
               type="monotone"
               dataKey="people"
-              stroke="#3b82f6"
+              stroke="#2563eb"
               name="Personas a bordo"
               strokeWidth={2}
             />
             <Line
               type="monotone"
               dataKey="capacity"
-              stroke="#e5e7eb"
+              stroke="#cbd5e1"
               name="Capacidad"
               strokeWidth={2}
               strokeDasharray="5 5"
@@ -74,7 +79,7 @@ export default function OccupancyPage() {
 
       <div className="space-y-4">
         <h3 className="text-xl font-bold text-gray-900">Datos Detallados de Ocupación</h3>
-        <DataTable data={mockOccupancy} columns={columns} />
+        <DataTable data={tableData} columns={columns} />
       </div>
     </div>
   );

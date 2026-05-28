@@ -24,9 +24,9 @@ export function DataTable<T>({
   sortDirection,
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+    <div className="overflow-x-auto bg-white rounded-lg border border-blue-200 shadow-md">
       <table className="w-full">
-        <thead className="bg-gray-50 border-b border-gray-200">
+        <thead className="bg-blue-50 border-b border-blue-200">
           <tr>
             {columns.map((col) => (
               <th
@@ -43,9 +43,9 @@ export function DataTable<T>({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200">
+        <tbody className="divide-y divide-blue-100">
           {data.map((row, idx) => (
-            <tr key={idx} className="hover:bg-gray-50">
+            <tr key={idx} className="hover:bg-blue-50 transition-colors">
               {columns.map((col) => (
                 <td key={String(col.key)} className="px-6 py-4 text-sm text-gray-700">
                   {col.render ? col.render((row as any)[col.key]) : (row as any)[col.key]}

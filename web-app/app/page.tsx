@@ -20,7 +20,10 @@ export default function Dashboard() {
     {
       key: "lastUpdated" as const,
       label: "Última actualización",
-      render: (value: string) => new Date(value).toLocaleTimeString("es-CO"),
+      render: (value: string) => {
+        const date = new Date(value);
+        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+      },
     },
   ];
 

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAccessibility } from '@/context/AccessibilityContext';
 
 // Colores extraídos de la Web-App
 const WebColors = {
@@ -31,12 +32,20 @@ export default function ReportScreen() {
   const [selectedIncident, setSelectedIncident] = useState<IncidentOption | null>(null);
   const [description, setDescription] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const { announce } = useAccessibility();
 
-  const handleSubmit = () => {
+  useEffect(() => {
+    announce('Pantalla de nuevo reporte. Selecciona el tipo de incidente y proporciona una descripción');
+  }, [announce]);
+
+  const handleSubmit = async () => {
     if (!selectedIncident || !description) {
-      Alert.alert('Error', 'Por favor selecciona el tipo de incidente y agrega una descripción.');
+      const message = 'Por favor selecciona el tipo de incidente y agrega una descripción';
+      Alert.alert('Error', message);
+      announce(message);
       return;
     }
+    announce(`Reporte de ${selectedIncident.label} enviado correctamente`);
     Alert.alert('Éxito', 'Reporte enviado correctamente.');
     setSelectedIncident(null);
     setDescription('');
@@ -44,52 +53,90 @@ export default function ReportScreen() {
   };
 
   return (
-    <ScrollView 
+    <ScrollView
       style={{ backgroundColor: WebColors.background }}
       contentContainerStyle={styles.container}
+      accessible={true}
+      accessibilityRole="list"
     >
-      <Text style={styles.title}>Nuevo Reporte</Text>
-      
-      <Text style={styles.label}>Tipo de Incidente</Text>
+      <Text
+        style={styles.title}
+        accessible={true}
+        accessibilityRole="header"
+      >
+        Nuevo Reporte
+      </Text>
+
+      <Text
+        style={styles.label}
+        accessible={true}
+        accessibilityRole="header"
+      >
+        Tipo de Incidente
+      </Text>
       {/* Dropdown Customizado Inline */}
-      <TouchableOpacity 
-        style={[styles.dropdownButton, isDropdownOpen && styles.dropdownButtonOpen]} 
-        onPress={() => setIsDropdownOpen(!isDropdownOpen)}
+      <TouchableOpacity
+        style={[styles.dropdownButton, isDropdownOpen && styles.dropdownButtonOpen]}
+        onPress={async () => {
+          setIsDropdownOpen(!isDropdownOpen);
+          const message = !isDropdownOpen ? 'Menú de incidentes abierto' : 'Menú de incidentes cerrado';
+          announce(message);
+        }}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Selector de tipo de incidente"
+        accessibilityHint={selectedIncident ? `Actualmente seleccionado: ${selectedIncident.label}` : 'Toca para seleccionar un tipo de incidente'}
+        accessibilityState={{ expanded: isDropdownOpen }}
       >
         {selectedIncident ? (
-          <View style={styles.dropdownButtonContent}>
-            <Ionicons name={selectedIncident.iconName} size={20} color={WebColors.primary} style={styles.dropdownIcon} />
-            <Text style={styles.dropdownTextSelected}>{selectedIncident.label}</Text>
+          <View style={styles.dropdownButtonContent} accessible={false}>
+            <Ionicons name={selectedIncident.iconName} size={20} color={WebColors.primary} style={styles.dropdownIcon} accessible={false} />
+            <Text style={styles.dropdownTextSelected} accessible={false}>{selectedIncident.label}</Text>
           </View>
         ) : (
-          <Text style={styles.dropdownTextPlaceholder}>Selecciona una opción...</Text>
+          <Text style={styles.dropdownTextPlaceholder} accessible={false}>Selecciona una opción...</Text>
         )}
-        <Ionicons name={isDropdownOpen ? "chevron-up" : "chevron-down"} size={20} color={WebColors.foreground} />
+        <Ionicons name={isDropdownOpen ? "chevron-up" : "chevron-down"} size={20} color={WebColors.foreground} accessible={false} />
       </TouchableOpacity>
 
       {/* Lista de opciones desplegada directamente, sin oscurecer pantalla */}
       {isDropdownOpen && (
-        <View style={styles.inlineDropdownList}>
+        <View
+          style={styles.inlineDropdownList}
+          accessible={true}
+          accessibilityRole="list"
+          accessibilityLabel="Opciones de incidentes"
+        >
           {INCIDENT_OPTIONS.map((item, index) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={item.id}
               style={[
-                styles.optionItem, 
+                styles.optionItem,
                 index === INCIDENT_OPTIONS.length - 1 && { borderBottomWidth: 0 }
               ]}
-              onPress={() => {
+              onPress={async () => {
                 setSelectedIncident(item);
                 setIsDropdownOpen(false);
+                announce(`Seleccionado: ${item.label}`);
               }}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
             >
-              <Ionicons name={item.iconName} size={20} color={WebColors.primary} style={styles.optionIcon} />
-              <Text style={styles.optionText}>{item.label}</Text>
+              <Ionicons name={item.iconName} size={20} color={WebColors.primary} style={styles.optionIcon} accessible={false} />
+              <Text style={styles.optionText} accessible={false}>{item.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
       )}
 
-      <Text style={styles.label}>Descripción</Text>
+      <Text
+        style={styles.label}
+        accessible={true}
+        accessibilityRole="header"
+      >
+        Descripción
+      </Text>
       <TextInput
         style={[styles.input, styles.textArea]}
         placeholder="Describe el problema en detalle..."
@@ -98,11 +145,21 @@ export default function ReportScreen() {
         onChangeText={setDescription}
         multiline
         numberOfLines={4}
+        accessible={true}
+        accessibilityLabel="Campo de descripción del reporte"
+        accessibilityHint="Escribe una descripción detallada del problema"
       />
 
       {/* Botón con contorno */}
-      <TouchableOpacity style={styles.submitButtonOutline} onPress={handleSubmit}>
-        <Text style={styles.submitButtonTextOutline}>Enviar Reporte</Text>
+      <TouchableOpacity
+        style={styles.submitButtonOutline}
+        onPress={handleSubmit}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Enviar Reporte"
+        accessibilityHint="Envía el reporte del incidente"
+      >
+        <Text style={styles.submitButtonTextOutline} accessible={false}>Enviar Reporte</Text>
       </TouchableOpacity>
 
     </ScrollView>

@@ -4,25 +4,29 @@ import { MapView, Marker } from '@/components/Map';
 import * as Location from 'expo-location';
 import { Colors } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAccessibility } from '@/context/AccessibilityContext';
 
 export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const mapRef = useRef<MapView>(null);
+  const { announce } = useAccessibility();
 
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setErrorMsg('Permiso de ubicación denegado');
+        announce('No se pudo obtener la ubicación: permiso denegado');
         return;
       }
 
       let loc = await Location.getCurrentPositionAsync({});
       setLocation(loc);
+      announce(`Ubicación obtenida. Latitud: ${loc.coords.latitude.toFixed(2)}, Longitud: ${loc.coords.longitude.toFixed(2)}`);
     })();
-  }, []);
+  }, [announce]);
 
   const handleRecenter = () => {
     if (location && mapRef.current) {
@@ -32,15 +36,18 @@ export default function MapScreen() {
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       }, 1000);
+      announce('Mapa recentrado en tu ubicación actual');
     }
   };
 
   if (!location) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors.light.primary} />
-        <Text style={styles.loadingText}>Obteniendo ubicación...</Text>
-        {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
+      <View style={styles.center} accessible={true} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
+        <ActivityIndicator size="large" color="#7A1F2B" />
+        <Text style={styles.loadingText} accessibilityRole="text">
+          Obteniendo ubicación...
+        </Text>
+        {errorMsg ? <Text style={styles.errorText} accessibilityRole="alert">{errorMsg}</Text> : null}
       </View>
     );
   }
@@ -48,14 +55,21 @@ export default function MapScreen() {
   return (
     <View style={styles.container}>
       {/* Buscador de rutas flotante */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+      <View
+        style={styles.searchContainer}
+        accessible={true}
+        accessibilityRole="search"
+        accessibilityLabel="Área de búsqueda"
+      >
+        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} accessible={false} />
         <TextInput
           style={styles.searchInput}
           placeholder="Buscar ruta o ubicación..."
           placeholderTextColor="#999"
           value={searchQuery}
           onChangeText={setSearchQuery}
+          accessibilityLabel="Campo de búsqueda de rutas"
+          accessibilityHint="Escribe para buscar rutas o ubicaciones específicas"
         />
       </View>
 
@@ -70,6 +84,10 @@ export default function MapScreen() {
         }}
         showsUserLocation={true}
         showsMyLocationButton={false}
+        accessible={true}
+        accessibilityRole="image"
+        accessibilityLabel="Mapa de rutas de transporte"
+        accessibilityHint="Muestra tu ubicación actual y las rutas disponibles"
       >
         <Marker
           coordinate={{
@@ -77,12 +95,23 @@ export default function MapScreen() {
             longitude: location.coords.longitude,
           }}
           title="Tú estás aquí"
+          accessible={true}
+          accessibilityRole="image"
+          accessibilityLabel="Tu ubicación actual"
+          accessibilityHint={`Latitud: ${location.coords.latitude.toFixed(2)}, Longitud: ${location.coords.longitude.toFixed(2)}`}
         />
       </MapView>
 
       {/* Botón flotante para recentrar */}
-      <TouchableOpacity style={styles.fab} onPress={handleRecenter}>
-        <Ionicons name="locate" size={24} color={Colors.light.primary} />
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={handleRecenter}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Recentrar mapa"
+        accessibilityHint="Centra el mapa en tu ubicación actual"
+      >
+        <Ionicons name="locate" size={24} color="#7A1F2B" accessible={false} />
       </TouchableOpacity>
     </View>
   );

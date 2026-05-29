@@ -6,7 +6,7 @@ type AITransitPlannerCardProps = {
 
 export function AITransitPlannerCard({ actions }: AITransitPlannerCardProps) {
   return (
-    <div className="gov-card p-6 space-y-4">
+    <div id="ai-transit-planner" className="gov-card p-6 space-y-4 scroll-mt-28">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-semibold gov-text-tertiary">AI Transit Planner</h3>

@@ -203,6 +203,34 @@ export default function ReportScreen() {
             </TouchableOpacity>
           ))}
         </View>
+      ) : null}
+
+      <Text style={styles.label} accessible={true} accessibilityRole="header">Evidencia Fotográfica</Text>
+      {imageUri ? (
+        <View style={styles.imagePreviewContainer} accessible={true} accessibilityLabel="Vista previa de la foto tomada">
+          <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+          <TouchableOpacity 
+            style={styles.reTakePhotoButton} 
+            onPress={takePhoto}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Volver a tomar foto"
+          >
+            <Ionicons name="camera-reverse" size={20} color={WebColors.surface} accessible={false} />
+            <Text style={styles.reTakePhotoText} accessible={false}>Volver a tomar</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity 
+          style={styles.photoButton} 
+          onPress={takePhoto}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Tomar foto de evidencia en vivo"
+        >
+          <Ionicons name="camera" size={32} color={WebColors.primary} accessible={false} />
+          <Text style={styles.photoButtonText} accessible={false}>Tomar Foto en Vivo</Text>
+        </TouchableOpacity>
       )}
 
       <Text style={styles.label}>Descripción</Text>
@@ -221,14 +249,19 @@ export default function ReportScreen() {
 
       {/* Botón con contorno */}
       <TouchableOpacity
-        style={styles.submitButtonOutline}
+        style={[styles.submitButtonOutline, isLoading && styles.submitButtonDisabled]}
         onPress={handleSubmit}
+        disabled={isLoading}
         accessible={true}
         accessibilityRole="button"
-        accessibilityLabel="Enviar Reporte"
+        accessibilityLabel={isLoading ? "Enviando reporte, por favor espera" : "Enviar Reporte"}
         accessibilityHint="Envía el reporte del incidente"
       >
-        <Text style={styles.submitButtonTextOutline} accessible={false}>Enviar Reporte</Text>
+        {isLoading ? (
+          <ActivityIndicator color={WebColors.primary} />
+        ) : (
+          <Text style={styles.submitButtonTextOutline} accessible={false}>Enviar Reporte</Text>
+        )}
       </TouchableOpacity>
 
     </ScrollView>

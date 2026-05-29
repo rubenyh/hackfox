@@ -64,7 +64,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>HackFox</Text>
+      <Text style={styles.title}>ViaLibre</Text>
       <Text style={styles.subtitle}>Inicia sesión o regístrate para enviar reportes</Text>
 
       <View style={styles.form}>

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { calculateDistance } from '../utils/routing';
 
 export interface SearchResult {
   placeId: string;
@@ -6,6 +7,7 @@ export interface SearchResult {
   address?: string;
   latitude?: number;
   longitude?: number;
+  distanceMeters?: number;
 }
 
 const GOOGLE_API_KEY = 'AIzaSyBcjPHiJqveQFzZ-qoIa_ojPgWxUZ436TE';
@@ -15,7 +17,7 @@ export function useGeocoding() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const searchPlace = useCallback(async (query: string, userLat?: number, userLon?: number): Promise<SearchResult[]> => {
+  const searchPlace = useCallback(async (query: string, searchLat?: number, searchLon?: number, userLat?: number, userLon?: number): Promise<SearchResult[]> => {
     if (!query.trim()) {
       setResults([]);
       return [];
@@ -26,42 +28,56 @@ export function useGeocoding() {
     
     try {
       const requestBody: any = {
-        input: query,
-        includedRegionCodes: ['mx'],
+        textQuery: query,
+        languageCode: 'es',
       };
 
-      if (userLat && userLon) {
-        requestBody.locationRestriction = {
+      if (searchLat && searchLon) {
+        requestBody.locationBias = {
           circle: {
             center: {
-              latitude: userLat,
-              longitude: userLon
+              latitude: searchLat,
+              longitude: searchLon
             },
-            radius: 15000.0 // 15km
+            radius: 5000.0 // 5km
           }
         };
       }
 
-      const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+      const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Goog-Api-Key': GOOGLE_API_KEY
+          'X-Goog-Api-Key': GOOGLE_API_KEY,
+          'X-Goog-FieldMask': 'places.id,places.displayName.text,places.formattedAddress,places.location'
         },
         body: JSON.stringify(requestBody)
       });
       
       const data = await res.json();
       
-      if (data.suggestions) {
-        const mapped = data.suggestions.map((s: any) => {
-          const prediction = s.placePrediction;
+      if (data.places) {
+        let mapped = data.places.map((p: any) => {
+          const lat = p.location?.latitude;
+          const lon = p.location?.longitude;
+          let dist = undefined;
+          
+          if (userLat && userLon && lat && lon) {
+             dist = calculateDistance({latitude: userLat, longitude: userLon}, {latitude: lat, longitude: lon}) * 1000;
+          }
+          
           return {
-            placeId: prediction.placeId,
-            name: prediction.structuredFormat?.mainText?.text || prediction.text?.text || 'Lugar desconocido',
-            address: prediction.structuredFormat?.secondaryText?.text || '',
+            placeId: p.id,
+            name: p.displayName?.text || 'Lugar desconocido',
+            address: p.formattedAddress || '',
+            latitude: lat,
+            longitude: lon,
+            distanceMeters: dist,
           };
         });
+        
+        mapped.sort((a: SearchResult, b: SearchResult) => (a.distanceMeters || Infinity) - (b.distanceMeters || Infinity));
+        
         setResults(mapped);
         return mapped;
       } else {

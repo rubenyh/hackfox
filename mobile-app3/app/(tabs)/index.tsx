@@ -20,6 +20,7 @@ export default function MapScreen() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [activeBuses, setActiveBuses] = useState<any[]>([]);
   const [transitRoute, setTransitRoute] = useState<TransitRouteResult | null>(null);
+  const [mapRegion, setMapRegion] = useState<{latitude: number, longitude: number} | null>(null);
   const mapRef = useRef<MapView>(null);
   const { announce } = useAccessibility();
   const insets = useSafeAreaInsets();
@@ -38,6 +39,7 @@ export default function MapScreen() {
 
       let loc = await Location.getCurrentPositionAsync({});
       setLocation(loc);
+      setMapRegion({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
       announce(`Ubicación obtenida. Latitud: ${loc.coords.latitude.toFixed(2)}, Longitud: ${loc.coords.longitude.toFixed(2)}`);
     })();
 
@@ -115,6 +117,50 @@ export default function MapScreen() {
     }
   };
 
+  const handlePoiClick = (e: any) => {
+    if (loading) return;
+
+    const destination = {
+      latitude: e.nativeEvent.coordinate.latitude,
+      longitude: e.nativeEvent.coordinate.longitude,
+    };
+
+    setSelectedDestination(destination);
+    setTransitRoute(null);
+    setSearchQuery(e.nativeEvent.name || 'Destino');
+
+    const routeResult = calculateTransitRoute(
+      { latitude: location.coords.latitude, longitude: location.coords.longitude },
+      destination,
+      routes
+    );
+
+    if (routeResult) {
+      setTransitRoute(routeResult);
+      announce(`Ruta calculada hacia ${e.nativeEvent.name || 'destino'}.`);
+    } else {
+      announce('No se encontraron rutas disponibles');
+    }
+  };
+
+  const handleRegionChangeComplete = (region: any) => {
+    setMapRegion({ latitude: region.latitude, longitude: region.longitude });
+    if (searchQuery.trim().length > 2 && !selectedDestination && showSearchResults) {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      searchTimeoutRef.current = setTimeout(() => {
+        searchPlace(
+          searchQuery, 
+          region.latitude, 
+          region.longitude,
+          location?.coords.latitude,
+          location?.coords.longitude
+        );
+      }, 800) as unknown as NodeJS.Timeout;
+    }
+  };
+
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
 
@@ -125,31 +171,33 @@ export default function MapScreen() {
     if (text.trim().length > 2) {
       setShowSearchResults(true);
       searchTimeoutRef.current = setTimeout(() => {
-        searchPlace(text, location?.coords.latitude, location?.coords.longitude);
+        searchPlace(
+          text, 
+          mapRegion?.latitude || location?.coords.latitude, 
+          mapRegion?.longitude || location?.coords.longitude,
+          location?.coords.latitude,
+          location?.coords.longitude
+        );
       }, 500) as unknown as NodeJS.Timeout;
     } else {
       clearResults();
       setShowSearchResults(false);
     }
   };
-
   const handleSelectSearchResult = async (result: typeof results[0]) => {
-    // Sacamos los detalles (lat, lon) con el placeId
-    const coords = await getPlaceDetails(result.placeId);
-
-    if (!coords) {
+    if (!result.latitude || !result.longitude) {
       announce('No se pudo obtener la ubicación exacta del lugar');
       return;
     }
 
     const destination: Destination = {
-      latitude: coords.latitude,
-      longitude: coords.longitude,
+      latitude: result.latitude,
+      longitude: result.longitude,
     };
 
     setSelectedDestination(destination);
     setTransitRoute(null);
-    setSearchQuery('');
+    setSearchQuery(result.name);
     setShowSearchResults(false);
     clearResults();
 
@@ -226,16 +274,6 @@ export default function MapScreen() {
               <Ionicons name="close-circle" size={20} color="#999" accessible={false} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity 
-            style={styles.micButton}
-            onPress={() => announce('Búsqueda por voz. Función en desarrollo')}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Búsqueda por voz"
-            accessibilityHint="Toca para buscar una ruta usando tu voz"
-          >
-            <Ionicons name="mic" size={24} color="#7A1F2B" accessible={false} />
-          </TouchableOpacity>
         </View>
 
         {showSearchResults && (results.length > 0 || searching) && (
@@ -248,7 +286,7 @@ export default function MapScreen() {
             ) : (
               <FlatList
                 keyboardShouldPersistTaps="handled"
-                scrollEnabled={false}
+                scrollEnabled={true}
                 data={results}
                 keyExtractor={(item) => item.placeId}
                 renderItem={({ item }) => (
@@ -265,6 +303,11 @@ export default function MapScreen() {
                       <Text style={styles.resultName} accessible={false}>{item.name}</Text>
                       {item.address && (
                         <Text style={styles.resultAddress} accessible={false}>{item.address}</Text>
+                      )}
+                      {item.distanceMeters !== undefined && (
+                        <Text style={{ fontSize: 12, color: '#7A1F2B', marginTop: 2 }} accessible={false}>
+                          A {(item.distanceMeters / 1000).toFixed(1)} km de ti
+                        </Text>
                       )}
                     </View>
                   </TouchableOpacity>
@@ -286,7 +329,11 @@ export default function MapScreen() {
         }}
         showsUserLocation={true}
         showsMyLocationButton={false}
+        showsMapToolbar={false}
+        mapPadding={{ top: insets.top + 80, right: 15, bottom: 100, left: 15 }}
         onPress={handleMapPress}
+        onPoiClick={handlePoiClick}
+        onRegionChangeComplete={handleRegionChangeComplete}
         accessible={true}
         accessibilityRole="image"
         accessibilityLabel="Mapa de rutas de transporte"
@@ -314,6 +361,20 @@ export default function MapScreen() {
             accessibilityHint={`Latitud: ${selectedDestination.latitude.toFixed(2)}, Longitud: ${selectedDestination.longitude.toFixed(2)}`}
           />
         )}
+        {!selectedDestination && results.map((res) => {
+          if (!res.latitude || !res.longitude) return null;
+          return (
+            <Marker
+              key={res.placeId}
+              coordinate={{ latitude: res.latitude, longitude: res.longitude }}
+              title={res.name}
+              description={res.address}
+              onPress={() => handleSelectSearchResult(res)}
+            >
+              <Ionicons name="location" size={40} color="#FF7F7F" />
+            </Marker>
+          );
+        })}
         {activeBuses.map((bus) => {
           if (!bus || bus.latitude === undefined || bus.longitude === undefined) {
             console.warn('Bus inválido:', bus);

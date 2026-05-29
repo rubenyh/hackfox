@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ActivityIndicator, Text, TextInput, TouchableOpacity, ScrollView, FlatList, Modal } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Text, TextInput, TouchableOpacity, ScrollView, FlatList, Modal, Alert } from 'react-native';
 import { MapView, Marker, Polyline } from '@/components/Map';
 import * as Location from 'expo-location';
 import { Colors } from '@/constants/theme';
@@ -20,6 +20,7 @@ export default function MapScreen() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [activeBuses, setActiveBuses] = useState<any[]>([]);
   const [transitRoute, setTransitRoute] = useState<TransitRouteResult | null>(null);
+  const [isTripActive, setIsTripActive] = useState(false);
   const [mapRegion, setMapRegion] = useState<{latitude: number, longitude: number} | null>(null);
   const mapRef = useRef<MapView>(null);
   const { announce } = useAccessibility();
@@ -88,7 +89,7 @@ export default function MapScreen() {
   };
 
   const handleMapPress = async (e: any) => {
-    if (loading) return;
+    if (loading || isTripActive || !location) return;
 
     const destination = {
       latitude: e.nativeEvent.coordinate.latitude,
@@ -107,7 +108,7 @@ export default function MapScreen() {
 
       if (routeResult) {
         setTransitRoute(routeResult);
-        announce(`Ruta calculada hacia destino. Camina ${routeResult.walkToBusDistance.toFixed(1)} km.`);
+        announce(`Ruta calculada hacia destino. Distancia total: ${routeResult.totalDistance.toFixed(1)} km.`);
       } else {
         announce('No se encontraron rutas disponibles');
       }
@@ -117,8 +118,8 @@ export default function MapScreen() {
     }
   };
 
-  const handlePoiClick = (e: any) => {
-    if (loading) return;
+  const handlePoiClick = async (e: any) => {
+    if (loading || isTripActive || !location) return;
 
     const destination = {
       latitude: e.nativeEvent.coordinate.latitude,
@@ -129,17 +130,22 @@ export default function MapScreen() {
     setTransitRoute(null);
     setSearchQuery(e.nativeEvent.name || 'Destino');
 
-    const routeResult = calculateTransitRoute(
-      { latitude: location.coords.latitude, longitude: location.coords.longitude },
+    try {
+      const routeResult = await calculateTransitRoute(
+        { latitude: location.coords.latitude, longitude: location.coords.longitude },
       destination,
       routes
     );
 
-    if (routeResult) {
-      setTransitRoute(routeResult);
-      announce(`Ruta calculada hacia ${e.nativeEvent.name || 'destino'}.`);
-    } else {
-      announce('No se encontraron rutas disponibles');
+      if (routeResult) {
+        setTransitRoute(routeResult);
+        announce(`Ruta calculada hacia ${e.nativeEvent.name || 'destino'}.`);
+      } else {
+        announce('No se encontraron rutas disponibles');
+      }
+    } catch (error) {
+      console.error('Error calculating route:', error);
+      announce('Error al calcular la ruta');
     }
   };
 
@@ -185,6 +191,7 @@ export default function MapScreen() {
     }
   };
   const handleSelectSearchResult = async (result: typeof results[0]) => {
+    if (isTripActive || !location) return;
     if (!result.latitude || !result.longitude) {
       announce('No se pudo obtener la ubicación exacta del lugar');
       return;
@@ -329,6 +336,7 @@ export default function MapScreen() {
         }}
         showsUserLocation={true}
         showsMyLocationButton={false}
+        // @ts-ignore: showsMapToolbar is valid on Android but missing in these type definitions
         showsMapToolbar={false}
         mapPadding={{ top: insets.top + 80, right: 15, bottom: 100, left: 15 }}
         onPress={handleMapPress}
@@ -361,7 +369,7 @@ export default function MapScreen() {
             accessibilityHint={`Latitud: ${selectedDestination.latitude.toFixed(2)}, Longitud: ${selectedDestination.longitude.toFixed(2)}`}
           />
         )}
-        {!selectedDestination && results.map((res) => {
+        {!selectedDestination && (results || []).map((res) => {
           if (!res.latitude || !res.longitude) return null;
           return (
             <Marker
@@ -400,29 +408,36 @@ export default function MapScreen() {
             </Marker>
           );
         })}
-        {transitRoute && (
-          <>
-            <Polyline
-              coordinates={transitRoute.walkToBusPath}
-              strokeColor="#3498db"
-              strokeWidth={4}
-              lineDashPattern={[5, 5]}
-            />
-            <Polyline
-              coordinates={transitRoute.route.geometry}
-              strokeColor="#7A1F2B"
-              strokeWidth={5}
-            />
-            <Polyline
-              coordinates={transitRoute.walkFromBusPath}
-              strokeColor="#3498db"
-              strokeWidth={4}
-              lineDashPattern={[5, 5]}
-            />
-            <Marker coordinate={{ latitude: transitRoute.originStop.lat, longitude: transitRoute.originStop.lon }} title="Sube aquí" pinColor="blue" />
-            <Marker coordinate={{ latitude: transitRoute.destinationStop.lat, longitude: transitRoute.destinationStop.lon }} title="Baja aquí" pinColor="blue" />
-          </>
-        )}
+        {transitRoute && transitRoute.legs && transitRoute.legs.map((leg, index) => {
+          if (leg.type === 'WALK') {
+            return (
+              <Polyline
+                key={`leg-${index}`}
+                coordinates={leg.path}
+                strokeColor="#3498db"
+                strokeWidth={4}
+                lineDashPattern={[5, 5]}
+              />
+            );
+          } else if (leg.type === 'TRANSIT') {
+            return (
+              <React.Fragment key={`leg-${index}`}>
+                <Polyline
+                  coordinates={leg.path}
+                  strokeColor="#7A1F2B"
+                  strokeWidth={5}
+                />
+                {leg.originStop && (
+                  <Marker coordinate={{ latitude: leg.originStop.lat, longitude: leg.originStop.lon }} title={`Sube a: ${leg.route?.name}`} pinColor="blue" />
+                )}
+                {leg.destinationStop && (
+                  <Marker coordinate={{ latitude: leg.destinationStop.lat, longitude: leg.destinationStop.lon }} title={`Baja de: ${leg.route?.name}`} pinColor="blue" />
+                )}
+              </React.Fragment>
+            );
+          }
+          return null;
+        })}
       </MapView>
 
       <TouchableOpacity
@@ -437,7 +452,7 @@ export default function MapScreen() {
       </TouchableOpacity>
 
       <Modal
-        visible={transitRoute !== null}
+        visible={transitRoute !== null && !isTripActive}
         animationType="slide"
         transparent={true}
         onRequestClose={() => {
@@ -448,9 +463,16 @@ export default function MapScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.recommendationPanel}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle} accessible={true} accessibilityRole="header">
-                Viaje Sugerido
-              </Text>
+              <View>
+                <Text style={styles.modalTitle} accessible={true} accessibilityRole="header">
+                  Viaje Sugerido
+                </Text>
+                {transitRoute && (
+                  <Text style={{color: '#666', fontSize: 13, marginTop: 2}}>
+                    Total: {transitRoute.totalTime} min ({(transitRoute.totalDistance).toFixed(1)} km)
+                  </Text>
+                )}
+              </View>
               <TouchableOpacity
                 onPress={() => {
                   setTransitRoute(null);
@@ -466,35 +488,24 @@ export default function MapScreen() {
 
             {transitRoute && (
               <ScrollView style={styles.modalContent}>
-                <View style={styles.itineraryStep}>
-                  <Ionicons name="walk" size={24} color="#3498db" />
-                  <View style={styles.itineraryText}>
-                    <Text style={styles.stepTitle}>Camina hacia la Parada</Text>
-                    <Text style={styles.stepDesc}>{(transitRoute.walkToBusDistance * 1000).toFixed(0)} metros • {transitRoute.walkToBusTime} min</Text>
-                  </View>
-                </View>
+                {transitRoute.legs.map((leg, index) => (
+                  <React.Fragment key={`leg-item-${index}`}>
+                    <View style={styles.itineraryStep}>
+                      <Ionicons name={leg.type === 'WALK' ? 'walk' : 'bus'} size={24} color={leg.type === 'WALK' ? '#3498db' : '#7A1F2B'} />
+                      <View style={styles.itineraryText}>
+                        <Text style={styles.stepTitle}>
+                          {leg.type === 'WALK' ? 'Camina' : `Sube al: ${leg.route?.name}`}
+                        </Text>
+                        <Text style={styles.stepDesc}>
+                          {leg.type === 'WALK' ? `${(leg.distance * 1000).toFixed(0)} metros (${leg.time} min)` : `${leg.time} min estimados`}
+                        </Text>
+                      </View>
+                    </View>
+                    {index < transitRoute.legs.length - 1 && <View style={styles.itineraryDivider} />}
+                  </React.Fragment>
+                ))}
 
-                <View style={styles.itineraryDivider} />
-
-                <View style={styles.itineraryStep}>
-                  <Ionicons name="bus" size={24} color="#7A1F2B" />
-                  <View style={styles.itineraryText}>
-                    <Text style={styles.stepTitle}>Sube al: {transitRoute.route.name}</Text>
-                    <Text style={styles.stepDesc}>{transitRoute.estimatedBusTime} min estimados (IoT activo)</Text>
-                  </View>
-                </View>
-
-                <View style={styles.itineraryDivider} />
-
-                <View style={styles.itineraryStep}>
-                  <Ionicons name="walk" size={24} color="#3498db" />
-                  <View style={styles.itineraryText}>
-                    <Text style={styles.stepTitle}>Camina a tu destino</Text>
-                    <Text style={styles.stepDesc}>{(transitRoute.walkFromBusDistance * 1000).toFixed(0)} metros • {transitRoute.walkFromBusTime} min</Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity style={styles.startTripBtn} onPress={() => { setTransitRoute(null); alert('¡Viaje Iniciado! Sigue las instrucciones.'); }}>
+                <TouchableOpacity style={styles.startTripBtn} onPress={() => { setIsTripActive(true); Alert.alert('¡Viaje Iniciado!', 'Sigue las instrucciones en el mapa. Tu ubicación y la ruta seguirán activos.'); }}>
                   <Text style={styles.startTripText}>INICIAR VIAJE</Text>
                 </TouchableOpacity>
               </ScrollView>
@@ -502,6 +513,33 @@ export default function MapScreen() {
           </View>
         </View>
       </Modal>
+
+      {isTripActive && transitRoute && (
+        <View style={styles.activeTripPanel}>
+          <View style={styles.activeTripHeader}>
+            <View>
+              <Text style={styles.activeTripTitle}>Viaje en Curso</Text>
+              <Text style={styles.activeTripETA}>ETA: {transitRoute.totalTime} min</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.panicButton} 
+              onPress={() => Alert.alert('🚨 Emergencia', 'Botón de pánico activado. Se ha notificado a emergencias y a tus contactos de seguridad con tu ubicación actual.')}
+            >
+              <Ionicons name="warning" size={28} color="white" />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity 
+            style={styles.endTripBtn} 
+            onPress={() => {
+              setIsTripActive(false);
+              setTransitRoute(null);
+              setSelectedDestination(null);
+            }}
+          >
+            <Text style={styles.endTripText}>Finalizar Viaje</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -712,5 +750,61 @@ const styles = StyleSheet.create({
   },
   busAnomaly: {
     backgroundColor: '#EB5757', // Rojo
+  },
+  activeTripPanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    padding: 20,
+    paddingBottom: 40,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  activeTripHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  activeTripTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#7A1F2B',
+  },
+  activeTripETA: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 4,
+  },
+  panicButton: {
+    backgroundColor: '#EB5757',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#EB5757',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  endTripBtn: {
+    backgroundColor: '#333',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  endTripText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

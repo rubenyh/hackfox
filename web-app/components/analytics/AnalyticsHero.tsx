@@ -2,9 +2,10 @@ import { Sparkles } from "lucide-react";
 
 type AnalyticsHeroProps = {
   actionsCount: number;
+  isSimulated?: boolean;
 };
 
-export function AnalyticsHero({ actionsCount }: AnalyticsHeroProps) {
+export function AnalyticsHero({ actionsCount, isSimulated = false }: AnalyticsHeroProps) {
   return (
     <section className="analytics-hero gov-card p-8 md:p-10">
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
@@ -21,6 +22,15 @@ export function AnalyticsHero({ actionsCount }: AnalyticsHeroProps) {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <div>
+            {/* <span
+              className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium ${
+                isSimulated ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"
+              }`}
+            >
+              {isSimulated ? "Datos simulados" : "Datos reales"}
+            </span> */}
+          </div>
           <button
             type="button"
             className="rounded-full bg-white/90 px-5 py-3 text-sm font-semibold text-primary shadow-lg transition hover:bg-white"

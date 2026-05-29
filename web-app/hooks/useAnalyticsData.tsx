@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase/firebase";
-import { mockOccupancy, mockRoutes } from "@/lib/mockData";
+// Removed mock data fallback: use only Firestore data
 import { Bus, OccupancyMetric, Route, RouteStop } from "@/lib/types";
 import type {
   CoverageRow,
@@ -61,6 +61,7 @@ export type AnalyticsData = {
   }>;
   aiActions: string[];
   topRoutesAttention: RouteHealthRow[];
+  isSimulated: boolean;
 };
 
 export function useAnalyticsData(): AnalyticsData {
@@ -114,8 +115,8 @@ export function useAnalyticsData(): AnalyticsData {
     };
   }, []);
 
-  const routesData = routes.length ? routes : mockRoutes;
-  const metricsData = metrics.length ? metrics : mockOccupancy;
+  const routesData = routes;
+  const metricsData = metrics;
 
   const occupancyByRoute = useMemo(() => {
     return metricsData.reduce<Record<string, number[]>>((acc, metric) => {
@@ -438,6 +439,10 @@ export function useAnalyticsData(): AnalyticsData {
     [routeHealth]
   );
 
+  // After removing mock fallbacks, data is considered simulated=false.
+  // Keep the flag for UI compatibility; it's always false now.
+  const isSimulated = false;
+
   const routeHealthColumns = [
     { key: "routeName" as const, label: "Ruta" },
     { key: "averageOccupancy" as const, label: "Ocupacion promedio", render: (val: number) => `${val}%` },
@@ -518,5 +523,6 @@ export function useAnalyticsData(): AnalyticsData {
     forecastColumns,
     aiActions,
     topRoutesAttention,
+    isSimulated,
   };
 }

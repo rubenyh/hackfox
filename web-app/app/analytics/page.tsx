@@ -40,12 +40,13 @@ export default function AnalyticsPage() {
     forecastColumns,
     aiActions,
     topRoutesAttention,
+    isSimulated,
   } = useAnalyticsData();
 
   return (
     <ProtectedRoute>
       <div className="analytics-shell space-y-10">
-        <AnalyticsHero actionsCount={aiActions.length} />
+        <AnalyticsHero actionsCount={aiActions.length} isSimulated={isSimulated} />
         <ExecutiveSummarySection cards={executiveCards} />
         <RouteHealthSection routes={routeHealth} columns={routeHealthColumns} />
 

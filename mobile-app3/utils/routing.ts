@@ -5,15 +5,14 @@ export interface Destination {
   longitude: number;
 }
 
-export interface RecommendedStop {
-  stop: RouteStop;
-  distance: number;
-  routeIds: string[];
-}
-
-export interface RecommendedRoute {
+export interface TransitRouteResult {
   route: Route;
-  stopsToUse: RouteStop[];
+  originStop: RouteStop;
+  destinationStop: RouteStop;
+  walkToBusDistance: number; // in km
+  walkFromBusDistance: number; // in km
+  walkToBusPath: Destination[];
+  walkFromBusPath: Destination[];
 }
 
 export function calculateDistance(
@@ -42,55 +41,75 @@ export function calculateDistance(
   return R * c; // distance in km
 }
 
-export function findNearestStops(
+export function calculateTransitRoute(
+  userLocation: Destination,
   destination: Destination,
-  routes: Route[],
-  maxDistance: number = 0.5 // 500 meters
-): RecommendedStop[] {
-  const stopsMap = new Map<string, RecommendedStop>();
+  routes: Route[]
+): TransitRouteResult | null {
+  if (routes.length === 0) return null;
 
+  let bestRoute: Route | null = null;
+  let bestOriginStop: RouteStop | null = null;
+  let bestDestStop: RouteStop | null = null;
+  let minTotalDistance = Infinity;
+
+  // Find the route that minimizes walking distance at both ends
   routes.forEach(route => {
-    route.stops.forEach(stop => {
-      const distance = calculateDistance(destination, stop);
+    if (route.stops.length < 2) return;
 
-      if (distance <= maxDistance) {
-        const key = `${stop.lat},${stop.lon}`;
-        if (stopsMap.has(key)) {
-          const existing = stopsMap.get(key)!;
-          existing.routeIds.push(route.id);
-        } else {
-          stopsMap.set(key, {
-            stop,
-            distance,
-            routeIds: [route.id],
-          });
-        }
+    // Simplification: Find nearest stop to user, and nearest stop to destination
+    let nearestOrigin = route.stops[0];
+    let minOriginDist = Infinity;
+    
+    let nearestDest = route.stops[route.stops.length - 1];
+    let minDestDist = Infinity;
+
+    route.stops.forEach(stop => {
+      const distToUser = calculateDistance(userLocation, stop);
+      if (distToUser < minOriginDist) {
+        minOriginDist = distToUser;
+        nearestOrigin = stop;
+      }
+
+      const distToDest = calculateDistance(destination, stop);
+      if (distToDest < minDestDist) {
+        minDestDist = distToDest;
+        nearestDest = stop;
       }
     });
-  });
 
-  return Array.from(stopsMap.values()).sort((a, b) => a.distance - b.distance);
-}
-
-export function getRoutesForStops(
-  stops: RouteStop[],
-  routes: Route[]
-): RecommendedRoute[] {
-  const stopCoordinates = new Set(stops.map(s => `${s.lat},${s.lon}`));
-  const recommendedRoutes: RecommendedRoute[] = [];
-
-  routes.forEach(route => {
-    const stopsToUse = route.stops.filter(
-      stop => stopCoordinates.has(`${stop.lat},${stop.lon}`)
-    );
-
-    if (stopsToUse.length > 0) {
-      recommendedRoutes.push({
-        route,
-        stopsToUse,
-      });
+    const totalWalk = minOriginDist + minDestDist;
+    if (totalWalk < minTotalDistance) {
+      minTotalDistance = totalWalk;
+      bestRoute = route;
+      bestOriginStop = nearestOrigin;
+      bestDestStop = nearestDest;
     }
   });
 
-  return recommendedRoutes;
+  if (!bestRoute || !bestOriginStop || !bestDestStop) {
+    // Failsafe para prototipo: Regresar la ruta 0 forzada
+    bestRoute = routes[0];
+    bestOriginStop = bestRoute.stops[0];
+    bestDestStop = bestRoute.stops[bestRoute.stops.length - 1];
+  }
+
+  const walkToBusDistance = calculateDistance(userLocation, bestOriginStop);
+  const walkFromBusDistance = calculateDistance(destination, bestDestStop);
+
+  return {
+    route: bestRoute,
+    originStop: bestOriginStop,
+    destinationStop: bestDestStop,
+    walkToBusDistance,
+    walkFromBusDistance,
+    walkToBusPath: [
+      userLocation,
+      { latitude: bestOriginStop.lat, longitude: bestOriginStop.lon }
+    ],
+    walkFromBusPath: [
+      { latitude: bestDestStop.lat, longitude: bestDestStop.lon },
+      destination
+    ]
+  };
 }

@@ -74,7 +74,6 @@ export default function ReportScreen() {
     setIsLoading(true);
 
     try {
-      // Obtener ubicación GPS
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permiso denegado', 'Se requiere permiso de ubicación para enviar el reporte con precisión.');
@@ -246,7 +245,6 @@ export default function ReportScreen() {
         accessibilityHint="Escribe una descripción detallada del problema"
       />
 
-      {/* Botón con contorno */}
       <TouchableOpacity
         style={[styles.submitButtonOutline, isLoading && styles.submitButtonDisabled]}
         onPress={handleSubmit}
@@ -272,13 +270,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 20,
     backgroundColor: WebColors.background,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    color: WebColors.primary,
-    marginTop: 40,
   },
   label: {
     fontSize: 16,

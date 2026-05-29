@@ -1,29 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text, TextInput, TouchableOpacity, ScrollView, FlatList, Modal } from 'react-native';
-import { MapView, Marker } from '@/components/Map';
+import { MapView, Marker, Polyline } from '@/components/Map';
 import * as Location from 'expo-location';
 import { Colors } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAccessibility } from '@/context/AccessibilityContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoutes } from '@/hooks/use-routes';
+import { calculateTransitRoute, Destination, TransitRouteResult } from '@/utils/routing';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { BusSimulator } from '@/components/BusSimulator';
 import { useGeocoding } from '@/hooks/use-geocoding';
-import { findNearestStops, getRoutesForStops, Destination, RecommendedStop, RecommendedRoute } from '@/utils/routing';
-import { auth } from '../../firebaseConfig';
-import { signOut } from 'firebase/auth';
 
 export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
-  const [recommendedStops, setRecommendedStops] = useState<RecommendedStop[]>([]);
-  const [recommendedRoutes, setRecommendedRoutes] = useState<RecommendedRoute[]>([]);
-  const [showRecommendations, setShowRecommendations] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [activeBuses, setActiveBuses] = useState<any[]>([]);
+  const [transitRoute, setTransitRoute] = useState<TransitRouteResult | null>(null);
   const mapRef = useRef<MapView>(null);
   const { announce } = useAccessibility();
+  const insets = useSafeAreaInsets();
   const { routes, loading } = useRoutes();
-  const { results, searching, searchPlace, clearResults } = useGeocoding();
+  const { results, searching, searchPlace, clearResults, getPlaceDetails } = useGeocoding();
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -47,13 +49,18 @@ export default function MapScreen() {
     };
   }, [announce]);
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Error al cerrar sesión", error);
-    }
-  };
+  useEffect(() => {
+    // Escuchar la colección de camiones (hardware de Ever) en tiempo real
+    const unsubscribe = onSnapshot(collection(db, 'active_buses'), (snapshot) => {
+      const buses: any[] = [];
+      snapshot.forEach((doc) => {
+        buses.push({ id: doc.id, ...doc.data() });
+      });
+      setActiveBuses(buses);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleRecenter = () => {
     if (location && mapRef.current) {
@@ -76,20 +83,19 @@ export default function MapScreen() {
     };
 
     setSelectedDestination(destination);
+    setTransitRoute(null);
 
-    const stops = findNearestStops(destination, routes);
-    setRecommendedStops(stops);
+    const routeResult = calculateTransitRoute(
+      { latitude: location.coords.latitude, longitude: location.coords.longitude },
+      destination,
+      routes
+    );
 
-    if (stops.length > 0) {
-      const routesForStops = getRoutesForStops(
-        stops.map(s => s.stop),
-        routes
-      );
-      setRecommendedRoutes(routesForStops);
-      setShowRecommendations(true);
-      announce(`Destino seleccionado. Se encontraron ${stops.length} paradas cercanas y ${routesForStops.length} rutas recomendadas`);
+    if (routeResult) {
+      setTransitRoute(routeResult);
+      announce(`Ruta calculada hacia destino.`);
     } else {
-      announce('No se encontraron paradas cercanas a este destino');
+      announce('No se encontraron rutas disponibles');
     }
   };
 
@@ -103,7 +109,7 @@ export default function MapScreen() {
     if (text.trim().length > 2) {
       setShowSearchResults(true);
       searchTimeoutRef.current = setTimeout(() => {
-        searchPlace(text);
+        searchPlace(text, location?.coords.latitude, location?.coords.longitude);
       }, 500) as unknown as NodeJS.Timeout;
     } else {
       clearResults();
@@ -111,39 +117,46 @@ export default function MapScreen() {
     }
   };
 
-  const handleSelectSearchResult = (result: typeof results[0]) => {
+  const handleSelectSearchResult = async (result: typeof results[0]) => {
+    // Sacamos los detalles (lat, lon) con el placeId
+    const coords = await getPlaceDetails(result.placeId);
+    
+    if (!coords) {
+      announce('No se pudo obtener la ubicación exacta del lugar');
+      return;
+    }
+    
     const destination: Destination = {
-      latitude: result.latitude,
-      longitude: result.longitude,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
     };
 
     setSelectedDestination(destination);
+    setTransitRoute(null);
     setSearchQuery('');
     setShowSearchResults(false);
     clearResults();
 
-    const stops = findNearestStops(destination, routes);
-    setRecommendedStops(stops);
+    const routeResult = calculateTransitRoute(
+      { latitude: location.coords.latitude, longitude: location.coords.longitude },
+      destination,
+      routes
+    );
+
+    if (routeResult) {
+      setTransitRoute(routeResult);
+      announce(`Ruta calculada hacia ${result.name}.`);
+    } else {
+      announce(`No se encontraron rutas hacia ${result.name}`);
+    }
 
     if (mapRef.current) {
       mapRef.current.animateToRegion({
-        latitude: result.latitude,
-        longitude: result.longitude,
+        latitude: destination.latitude,
+        longitude: destination.longitude,
         latitudeDelta: 0.05,
         longitudeDelta: 0.05,
       }, 500);
-    }
-
-    if (stops.length > 0) {
-      const routesForStops = getRoutesForStops(
-        stops.map(s => s.stop),
-        routes
-      );
-      setRecommendedRoutes(routesForStops);
-      setShowRecommendations(true);
-      announce(`Destino seleccionado: ${result.name}. Se encontraron ${stops.length} paradas cercanas y ${routesForStops.length} rutas recomendadas`);
-    } else {
-      announce(`Destino seleccionado: ${result.name}. No se encontraron paradas cercanas`);
     }
   };
 
@@ -161,9 +174,9 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Buscador de rutas flotante */}
+      <BusSimulator />
       <View
-        style={styles.searchContainerWrapper}
+        style={[styles.searchContainerWrapper, { top: insets.top + 16 }]}
         accessible={true}
         accessibilityRole="search"
         accessibilityLabel="Área de búsqueda"
@@ -193,9 +206,18 @@ export default function MapScreen() {
               <Ionicons name="close-circle" size={20} color="#999" accessible={false} />
             </TouchableOpacity>
           )}
+          <TouchableOpacity 
+            style={styles.micButton}
+            onPress={() => announce('Búsqueda por voz. Función en desarrollo')}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Búsqueda por voz"
+            accessibilityHint="Toca para buscar una ruta usando tu voz"
+          >
+            <Ionicons name="mic" size={24} color="#7A1F2B" accessible={false} />
+          </TouchableOpacity>
         </View>
 
-        {/* Resultados de búsqueda */}
         {showSearchResults && (results.length > 0 || searching) && (
           <View style={styles.searchResultsContainer}>
             {searching ? (
@@ -205,9 +227,10 @@ export default function MapScreen() {
               </View>
             ) : (
               <FlatList
+                keyboardShouldPersistTaps="handled"
                 scrollEnabled={false}
                 data={results}
-                keyExtractor={(item, index) => `${item.latitude}-${item.longitude}-${index}`}
+                keyExtractor={(item) => item.placeId}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={styles.searchResultItem}
@@ -271,9 +294,50 @@ export default function MapScreen() {
             accessibilityHint={`Latitud: ${selectedDestination.latitude.toFixed(2)}, Longitud: ${selectedDestination.longitude.toFixed(2)}`}
           />
         )}
+        {activeBuses.map((bus) => (
+          <Marker
+            key={bus.id}
+            coordinate={{ latitude: bus.latitude, longitude: bus.longitude }}
+            title={bus.routeName}
+            description={`Velocidad: ${bus.speed} km/h ${bus.status === 'anomaly' ? '- ¡ANOMALÍA/BACHE!' : ''}`}
+            accessible={true}
+            accessibilityRole="image"
+            accessibilityLabel={`Camión ${bus.routeName} en movimiento`}
+          >
+            <View style={[
+              styles.busMarker, 
+              bus.status === 'delayed' ? styles.busDelayed : null,
+              bus.status === 'anomaly' ? styles.busAnomaly : null
+            ]}>
+              <Ionicons name="bus" size={16} color="white" accessible={false} />
+            </View>
+          </Marker>
+        ))}
+        {transitRoute && (
+          <>
+            <Polyline
+              coordinates={transitRoute.walkToBusPath}
+              strokeColor="#3498db"
+              strokeWidth={4}
+              lineDashPattern={[5, 5]}
+            />
+            <Polyline
+              coordinates={transitRoute.route.geometry}
+              strokeColor="#7A1F2B"
+              strokeWidth={5}
+            />
+            <Polyline
+              coordinates={transitRoute.walkFromBusPath}
+              strokeColor="#3498db"
+              strokeWidth={4}
+              lineDashPattern={[5, 5]}
+            />
+            <Marker coordinate={{ latitude: transitRoute.originStop.lat, longitude: transitRoute.originStop.lon }} title="Sube aquí" pinColor="blue" />
+            <Marker coordinate={{ latitude: transitRoute.destinationStop.lat, longitude: transitRoute.destinationStop.lon }} title="Baja aquí" pinColor="blue" />
+          </>
+        )}
       </MapView>
 
-      {/* Botón flotante para recentrar */}
       <TouchableOpacity
         style={styles.fab}
         onPress={handleRecenter}
@@ -285,27 +349,25 @@ export default function MapScreen() {
         <Ionicons name="locate" size={24} color="#7A1F2B" accessible={false} />
       </TouchableOpacity>
 
-      {/* Recomendaciones Modal */}
       <Modal
-        visible={showRecommendations && selectedDestination !== null}
+        visible={transitRoute !== null}
         animationType="slide"
         transparent={true}
         onRequestClose={() => {
-          setShowRecommendations(false);
-          announce('Panel de recomendaciones cerrado');
+          setTransitRoute(null);
+          announce('Ruta cerrada');
         }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.recommendationPanel}>
-            {/* Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle} accessible={true} accessibilityRole="header">
-                Destino Seleccionado
+                Viaje Sugerido
               </Text>
               <TouchableOpacity
                 onPress={() => {
-                  setShowRecommendations(false);
-                  announce('Panel de recomendaciones cerrado');
+                  setTransitRoute(null);
+                  announce('Ruta cerrada');
                 }}
                 accessible={true}
                 accessibilityRole="button"
@@ -315,68 +377,41 @@ export default function MapScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalContent}>
-              {/* Paradas Recomendadas */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle} accessible={true} accessibilityRole="header">
-                  Paradas Cercanas ({recommendedStops.length})
-                </Text>
-                {recommendedStops.length > 0 ? (
-                  <FlatList
-                    scrollEnabled={false}
-                    data={recommendedStops}
-                    keyExtractor={(item, index) => `${item.stop.lat}-${item.stop.lon}-${index}`}
-                    renderItem={({ item, index }) => (
-                      <View style={styles.stopCard} accessible={true} accessibilityRole="text">
-                        <View style={styles.stopInfo}>
-                          <Text style={styles.stopDistance} accessible={true}>
-                            Parada {index + 1} - {(item.distance * 1000).toFixed(0)}m
-                          </Text>
-                          <Text style={styles.stopRoutes} accessible={true}>
-                            {item.routeIds.length} ruta{item.routeIds.length !== 1 ? 's' : ''} disponible{item.routeIds.length !== 1 ? 's' : ''}
-                          </Text>
-                        </View>
-                        <Ionicons name="location" size={20} color="#7A1F2B" accessible={false} />
-                      </View>
-                    )}
-                  />
-                ) : (
-                  <Text style={styles.noData} accessible={true}>No hay paradas cercanas</Text>
-                )}
-              </View>
+            {transitRoute && (
+              <ScrollView style={styles.modalContent}>
+                <View style={styles.itineraryStep}>
+                  <Ionicons name="walk" size={24} color="#3498db" />
+                  <View style={styles.itineraryText}>
+                    <Text style={styles.stepTitle}>Camina hacia la Parada</Text>
+                    <Text style={styles.stepDesc}>{(transitRoute.walkToBusDistance * 1000).toFixed(0)} metros</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.itineraryDivider} />
 
-              {/* Rutas Recomendadas */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle} accessible={true} accessibilityRole="header">
-                  Rutas Recomendadas ({recommendedRoutes.length})
-                </Text>
-                {recommendedRoutes.length > 0 ? (
-                  <FlatList
-                    scrollEnabled={false}
-                    data={recommendedRoutes}
-                    keyExtractor={(item) => item.route.id}
-                    renderItem={({ item }) => (
-                      <View style={styles.routeCard} accessible={true} accessibilityRole="button">
-                        <View style={styles.routeIcon} accessible={false}>
-                          <Ionicons name="bus" size={20} color="#B08A57" accessible={false} />
-                        </View>
-                        <View style={styles.routeInfo}>
-                          <Text style={styles.routeName} accessible={true}>
-                            {item.route.name}
-                          </Text>
-                          <Text style={styles.routeStops} accessible={true}>
-                            {item.stopsToUse.length} parada{item.stopsToUse.length !== 1 ? 's' : ''} en esta ruta
-                          </Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color="#ccc" accessible={false} />
-                      </View>
-                    )}
-                  />
-                ) : (
-                  <Text style={styles.noData} accessible={true}>No hay rutas disponibles</Text>
-                )}
-              </View>
-            </ScrollView>
+                <View style={styles.itineraryStep}>
+                  <Ionicons name="bus" size={24} color="#7A1F2B" />
+                  <View style={styles.itineraryText}>
+                    <Text style={styles.stepTitle}>Sube al: {transitRoute.route.name}</Text>
+                    <Text style={styles.stepDesc}>15 min estimados (IoT activo)</Text>
+                  </View>
+                </View>
+
+                <View style={styles.itineraryDivider} />
+
+                <View style={styles.itineraryStep}>
+                  <Ionicons name="walk" size={24} color="#3498db" />
+                  <View style={styles.itineraryText}>
+                    <Text style={styles.stepTitle}>Camina a tu destino</Text>
+                    <Text style={styles.stepDesc}>{(transitRoute.walkFromBusDistance * 1000).toFixed(0)} metros</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity style={styles.startTripBtn} onPress={() => { setTransitRoute(null); alert('¡Viaje Iniciado! Sigue las instrucciones.'); }}>
+                  <Text style={styles.startTripText}>INICIAR VIAJE</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>
@@ -412,7 +447,6 @@ const styles = StyleSheet.create({
   },
   searchContainerWrapper: {
     position: 'absolute',
-    top: 60,
     left: 20,
     right: 20,
     zIndex: 100,
@@ -437,6 +471,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: Colors.light.text,
+  },
+  micButton: {
+    padding: 4,
+    marginLeft: 8,
   },
   searchResultsContainer: {
     backgroundColor: '#FFF',
@@ -539,74 +577,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
-  section: {
-    marginBottom: 25,
+  itineraryStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
   },
-  sectionTitle: {
+  itineraryText: {
+    marginLeft: 15,
+  },
+  stepTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: Colors.light.text,
-    marginBottom: 12,
   },
-  stopCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-    justifyContent: 'space-between',
-  },
-  stopInfo: {
-    flex: 1,
-  },
-  stopDistance: {
+  stepDesc: {
     fontSize: 14,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  stopRoutes: {
-    fontSize: 12,
     color: '#666',
-    marginTop: 4,
   },
-  routeCard: {
-    flexDirection: 'row',
+  itineraryDivider: {
+    height: 30,
+    width: 2,
+    backgroundColor: '#ccc',
+    marginLeft: 11,
+  },
+  startTripBtn: {
+    backgroundColor: '#7A1F2B',
+    borderRadius: 12,
+    padding: 15,
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(58, 58, 58, 0.18)',
+    marginTop: 25,
+    marginBottom: 10,
   },
-  routeIcon: {
-    width: 40,
-    height: 40,
+  startTripText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  busMarker: {
+    backgroundColor: '#B08A57',
+    padding: 6,
     borderRadius: 20,
-    backgroundColor: '#E8DDD0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+    borderWidth: 2,
+    borderColor: 'white',
   },
-  routeInfo: {
-    flex: 1,
+  busDelayed: {
+    backgroundColor: '#F2994A', // Naranja
   },
-  routeName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  routeStops: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-  },
-  noData: {
-    fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    paddingVertical: 20,
+  busAnomaly: {
+    backgroundColor: '#EB5757', // Rojo
   },
 });

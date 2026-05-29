@@ -136,13 +136,7 @@ export default function ReportScreen() {
       accessible={true}
       accessibilityRole="list"
     >
-      <Text
-        style={styles.title}
-        accessible={true}
-        accessibilityRole="header"
-      >
-        Nuevo Reporte
-      </Text>
+
 
       <Text
         style={styles.label}
@@ -205,35 +199,40 @@ export default function ReportScreen() {
         </View>
       ) : null}
 
-      <Text style={styles.label} accessible={true} accessibilityRole="header">Evidencia Fotográfica</Text>
+      <Text style={styles.label} accessible={true} accessibilityRole="header">
+        Foto del Incidente
+      </Text>
       {imageUri ? (
-        <View style={styles.imagePreviewContainer} accessible={true} accessibilityLabel="Vista previa de la foto tomada">
-          <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-          <TouchableOpacity 
-            style={styles.reTakePhotoButton} 
+        <View style={styles.imagePreviewContainer} accessible={true} accessibilityRole="image" accessibilityLabel="Foto del incidente tomada">
+          <Image source={{ uri: imageUri }} style={styles.imagePreview} accessible={false} />
+          <TouchableOpacity
+            style={styles.reTakePhotoButton}
             onPress={takePhoto}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Volver a tomar foto"
+            accessibilityLabel="Tomar otra foto"
           >
             <Ionicons name="camera-reverse" size={20} color={WebColors.surface} accessible={false} />
-            <Text style={styles.reTakePhotoText} accessible={false}>Volver a tomar</Text>
+            <Text style={styles.reTakePhotoText} accessible={false}>Retomar</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <TouchableOpacity 
-          style={styles.photoButton} 
+        <TouchableOpacity
+          style={styles.photoButton}
           onPress={takePhoto}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Tomar foto de evidencia en vivo"
+          accessibilityLabel="Tomar foto del incidente"
+          accessibilityHint="Toca para abrir la cámara"
         >
-          <Ionicons name="camera" size={32} color={WebColors.primary} accessible={false} />
+          <Ionicons name="camera" size={40} color={WebColors.primary} accessible={false} />
           <Text style={styles.photoButtonText} accessible={false}>Tomar Foto en Vivo</Text>
         </TouchableOpacity>
       )}
 
-      <Text style={styles.label}>Descripción</Text>
+      <Text style={styles.label} accessible={true} accessibilityRole="header">
+        Descripción
+      </Text>
       <TextInput
         style={[styles.input, styles.textArea]}
         placeholder="Describe el problema en detalle..."
@@ -258,7 +257,7 @@ export default function ReportScreen() {
         accessibilityHint="Envía el reporte del incidente"
       >
         {isLoading ? (
-          <ActivityIndicator color={WebColors.primary} />
+          <ActivityIndicator size="small" color={WebColors.primary} />
         ) : (
           <Text style={styles.submitButtonTextOutline} accessible={false}>Enviar Reporte</Text>
         )}

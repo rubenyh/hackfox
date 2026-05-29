@@ -11,6 +11,7 @@ import type {
   DemandHighlights,
   ExecutiveCard,
   ForecastRow,
+  HeatmapPoint,
   OverlapRow,
   RecommendationItem,
   RouteHealthRow,
@@ -30,6 +31,8 @@ export type AnalyticsData = {
   executiveCards: ExecutiveCard[];
   demandHighlights: DemandHighlights;
   peakHourData: Array<{ hour: string; occupancy: number }>;
+  heatmapPoints: HeatmapPoint[];
+  heatmapCenter: { lat: number; lng: number };
   capacityRecommendations: RecommendationItem[];
   fleetRecommendations: RecommendationItem[];
   coverageRows: CoverageRow[];
@@ -270,6 +273,31 @@ export function useAnalyticsData(): AnalyticsData {
       .sort((a, b) => Number.parseInt(a.hour, 10) - Number.parseInt(b.hour, 10));
   }, [metricsData]);
 
+  const heatmapCenter = useMemo(() => {
+    if (!routeStops.length) return { lat: 4.711, lng: -74.0721 };
+    const totals = routeStops.reduce(
+      (acc, stop) => ({ lat: acc.lat + stop.lat, lng: acc.lng + stop.lng }),
+      { lat: 0, lng: 0 }
+    );
+    return {
+      lat: totals.lat / routeStops.length,
+      lng: totals.lng / routeStops.length,
+    };
+  }, [routeStops]);
+
+  const heatmapPoints = useMemo<HeatmapPoint[]>(() => {
+    if (!routeStops.length) return [];
+    const weightByRoute = routeHealth.reduce<Record<string, number>>((acc, route) => {
+      acc[route.routeId] = Math.max(10, route.averageOccupancy);
+      return acc;
+    }, {});
+
+    return routeStops.map((stop) => ({
+      location: { lat: stop.lat, lng: stop.lng },
+      weight: weightByRoute[stop.routeId] ?? 30,
+    }));
+  }, [routeStops, routeHealth]);
+
   const coverageRows = useMemo<CoverageRow[]>(() => {
     return routesData.map((route) => {
       const stopCount = stopCountByRoute[route.id] ?? Math.max(4, Math.round(route.totalKm / 3));
@@ -476,6 +504,8 @@ export function useAnalyticsData(): AnalyticsData {
     executiveCards,
     demandHighlights,
     peakHourData,
+    heatmapPoints,
+    heatmapCenter,
     capacityRecommendations,
     fleetRecommendations,
     coverageRows,

@@ -237,6 +237,11 @@ body {
     border: 1px solid var(--border-subtle);
   }
 
+  .analytics-map-live {
+    background: #ffffff;
+    overflow: hidden;
+  }
+
   .analytics-map-grid {
     position: absolute;
     inset: 0;
@@ -274,6 +279,19 @@ body {
     top: 16px;
     bottom: auto;
     color: var(--success);
+  }
+
+  .analytics-map-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--tertiary);
+    background: var(--surface);
   }
 
   .analytics-chip {

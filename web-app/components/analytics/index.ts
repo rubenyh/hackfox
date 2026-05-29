@@ -6,6 +6,7 @@ export { DemandForecastingCard } from "./DemandForecastingCard";
 export { DemandHeatmapsCard } from "./DemandHeatmapsCard";
 export { ExecutiveSummarySection } from "./ExecutiveSummarySection";
 export { FleetOptimizationCard } from "./FleetOptimizationCard";
+export { GoogleHeatmap } from "./GoogleHeatmap";
 export { PeakHourAnalysisCard } from "./PeakHourAnalysisCard";
 export { RouteHealthSection } from "./RouteHealthSection";
 export { RouteOverlapSection } from "./RouteOverlapSection";

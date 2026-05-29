@@ -58,3 +58,11 @@ export type DemandHighlights = {
   highDemand: string[];
   lowDemand: string[];
 };
+
+export type HeatmapPoint = {
+  location: {
+    lat: number;
+    lng: number;
+  };
+  weight?: number;
+};

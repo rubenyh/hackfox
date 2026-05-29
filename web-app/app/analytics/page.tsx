@@ -26,6 +26,8 @@ export default function AnalyticsPage() {
     executiveCards,
     demandHighlights,
     peakHourData,
+    heatmapPoints,
+    heatmapCenter,
     capacityRecommendations,
     fleetRecommendations,
     coverageRows,
@@ -48,7 +50,11 @@ export default function AnalyticsPage() {
         <RouteHealthSection routes={routeHealth} columns={routeHealthColumns} />
 
         <section className="grid gap-6 lg:grid-cols-2">
-          <DemandHeatmapsCard highlights={demandHighlights} />
+          <DemandHeatmapsCard
+            highlights={demandHighlights}
+            points={heatmapPoints}
+            center={heatmapCenter}
+          />
           <PeakHourAnalysisCard data={peakHourData} />
         </section>
 

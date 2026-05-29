@@ -7,6 +7,7 @@ import { useRoutes } from '@/hooks/use-routes';
 import { useAccessibility } from '@/context/AccessibilityContext';
 
 const WebColors = {
+  background: '#F7F4EF',
   primary: '#7A1F2B',
   tint: '#B08A57',
   secondary: '#E8DDD0',
@@ -134,16 +135,10 @@ export default function RutasScreen() {
         </View>
       ) : (
         <>
-          <Text
-            style={styles.title}
-            accessible={true}
-            accessibilityRole="header"
-          >
-            Rutas Disponibles
-          </Text>
           <FlatList
             data={routes}
             keyExtractor={item => item.id}
+            contentContainerStyle={{ paddingTop: 24, paddingBottom: 24 }}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.card}
@@ -176,7 +171,7 @@ export default function RutasScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: WebColors.background,
   },
   mapContainer: {
     flex: 1,
@@ -210,14 +205,6 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     padding: 8,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: Colors.light.text,
-    marginBottom: 20,
-    marginTop: 60,
-    paddingHorizontal: 20,
   },
   card: {
     backgroundColor: WebColors.surface,

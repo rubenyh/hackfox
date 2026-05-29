@@ -5,8 +5,7 @@ import * as Location from 'expo-location';
 import { Colors } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAccessibility } from '@/context/AccessibilityContext';
-import { auth } from '../../firebaseConfig';
-import { signOut } from 'firebase/auth';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -14,6 +13,7 @@ export default function MapScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const mapRef = useRef<MapView>(null);
   const { announce } = useAccessibility();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     (async () => {
@@ -29,14 +29,6 @@ export default function MapScreen() {
       announce(`Ubicación obtenida. Latitud: ${loc.coords.latitude.toFixed(2)}, Longitud: ${loc.coords.longitude.toFixed(2)}`);
     })();
   }, [announce]);
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Error al cerrar sesión", error);
-    }
-  };
 
   const handleRecenter = () => {
     if (location && mapRef.current) {
@@ -66,7 +58,7 @@ export default function MapScreen() {
     <View style={styles.container}>
       {/* Buscador de rutas flotante */}
       <View
-        style={styles.searchContainer}
+        style={[styles.searchContainer, { top: insets.top + 16 }]}
         accessible={true}
         accessibilityRole="search"
         accessibilityLabel="Área de búsqueda"
@@ -81,8 +73,15 @@ export default function MapScreen() {
           accessibilityLabel="Campo de búsqueda de rutas"
           accessibilityHint="Escribe para buscar rutas o ubicaciones específicas"
         />
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={24} color="#7A1F2B" />
+        <TouchableOpacity 
+          style={styles.micButton}
+          onPress={() => announce('Búsqueda por voz. Función en desarrollo')}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Búsqueda por voz"
+          accessibilityHint="Toca para buscar una ruta usando tu voz"
+        >
+          <Ionicons name="mic" size={24} color="#7A1F2B" accessible={false} />
         </TouchableOpacity>
       </View>
 
@@ -158,7 +157,6 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     position: 'absolute',
-    top: 60,
     left: 20,
     right: 20,
     flexDirection: 'row',
@@ -181,6 +179,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: Colors.light.text,
+  },
+  micButton: {
+    padding: 4,
+    marginLeft: 8,
   },
   logoutButton: {
     padding: 5,

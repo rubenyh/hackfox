@@ -137,14 +137,6 @@ export default function ReportScreen() {
       accessibilityRole="list"
     >
       <Text
-        style={styles.title}
-        accessible={true}
-        accessibilityRole="header"
-      >
-        Nuevo Reporte
-      </Text>
-
-      <Text
         style={styles.label}
         accessible={true}
         accessibilityRole="header"
@@ -273,13 +265,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 20,
     backgroundColor: WebColors.background,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    color: WebColors.primary,
-    marginTop: 40,
   },
   label: {
     fontSize: 16,

@@ -1,8 +1,6 @@
 import { Tabs } from 'expo-router';
 import React, { useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Modal, TouchableOpacity } from 'react-native';
-import { AccessibilitySettings } from '@/components/AccessibilitySettings';
 import { useAccessibility } from '@/context/AccessibilityContext';
 
 const WebColors = {
@@ -13,13 +11,7 @@ const WebColors = {
 };
 
 export default function TabLayout() {
-  const [showAccessibilitySettings, setShowAccessibilitySettings] = useState(false);
   const { announce } = useAccessibility();
-
-  const handleAccessibilityPress = () => {
-    setShowAccessibilitySettings(true);
-    announce('Abriendo configuración de accesibilidad');
-  };
 
   return (
     <>
@@ -32,17 +24,6 @@ export default function TabLayout() {
             borderTopColor: WebColors.border,
           },
           headerShown: true,
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={handleAccessibilityPress}
-              style={{ marginRight: 16 }}
-              accessibilityLabel="Abrir configuración de accesibilidad"
-              accessibilityRole="button"
-              accessibilityHint="Abre las opciones de accesibilidad incluyendo voiceover"
-            >
-              <Ionicons name="accessibility" size={24} color={WebColors.primary} />
-            </TouchableOpacity>
-          ),
           headerStyle: {
             backgroundColor: WebColors.background,
           },
@@ -55,6 +36,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="index"
           options={{
+            headerShown: false,
             title: 'Mapa',
             tabBarLabel: 'Mapa',
             tabBarIcon: ({ color }) => <Ionicons size={28} name="map" color={color} />,
@@ -79,11 +61,16 @@ export default function TabLayout() {
             headerTitle: 'Nuevo Reporte',
           }}
         />
+        <Tabs.Screen
+          name="perfil"
+          options={{
+            title: 'Perfil',
+            tabBarLabel: 'Perfil',
+            tabBarIcon: ({ color }) => <Ionicons size={28} name="person" color={color} />,
+            headerTitle: 'Mi Perfil',
+          }}
+        />
       </Tabs>
-
-      <Modal visible={showAccessibilitySettings} animationType="slide">
-        <AccessibilitySettings onClose={() => setShowAccessibilitySettings(false)} />
-      </Modal>
     </>
   );
 }

@@ -52,7 +52,10 @@ export const AccessibilitySettings = ({ onClose }: { onClose: () => void }) => {
       <ScrollView style={styles.container}>
 
         <View style={styles.settingSection}>
-          <Text style={styles.sectionTitle}>🔊 Voiceover</Text>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="volume-high" size={24} color={WebColors.primary} />
+            <Text style={styles.sectionTitle}>Voiceover</Text>
+          </View>
           <View style={styles.settingItem}>
             <View style={styles.labelContainer}>
               <Text style={styles.settingLabel}>Activar Voiceover</Text>
@@ -70,7 +73,10 @@ export const AccessibilitySettings = ({ onClose }: { onClose: () => void }) => {
         </View>
 
         <View style={styles.settingSection}>
-          <Text style={styles.sectionTitle}>📱 Lector de Pantalla</Text>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="phone-portrait" size={24} color={WebColors.primary} />
+            <Text style={styles.sectionTitle}>Lector de Pantalla</Text>
+          </View>
           <View style={styles.settingItem}>
             <View style={styles.labelContainer}>
               <Text style={styles.settingLabel}>Activar Lector de Pantalla</Text>
@@ -134,11 +140,16 @@ const styles = StyleSheet.create({
     borderBottomColor: WebColors.border,
     backgroundColor: WebColors.surface,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.light.text,
-    marginBottom: 16,
+    marginLeft: 8,
   },
   settingItem: {
     flexDirection: 'row',

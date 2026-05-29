@@ -4,6 +4,8 @@ import { MapView, Marker } from '@/components/Map';
 import * as Location from 'expo-location';
 import { Colors } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { auth } from '../../firebaseConfig';
+import { signOut } from 'firebase/auth';
 
 export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -23,6 +25,14 @@ export default function MapScreen() {
       setLocation(loc);
     })();
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error al cerrar sesión", error);
+    }
+  };
 
   const handleRecenter = () => {
     if (location && mapRef.current) {
@@ -57,6 +67,9 @@ export default function MapScreen() {
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={24} color="#7A1F2B" />
+        </TouchableOpacity>
       </View>
 
       <MapView
@@ -139,6 +152,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: Colors.light.text,
+  },
+  logoutButton: {
+    padding: 5,
+    marginLeft: 5,
   },
   fab: {
     position: 'absolute',

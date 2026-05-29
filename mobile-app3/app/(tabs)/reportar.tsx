@@ -3,17 +3,16 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert,
 import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { db, storage, functions } from '../../firebaseConfig';
+import { db, storage, auth } from '../../firebaseConfig';
+import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-// Colores extraídos de la Web-App
 const WebColors = {
   background: '#F7F4EF',
   foreground: '#3A3A3A',
-  primary: '#7A1F2B',     // Guinda
+  primary: '#7A1F2B',
   secondary: '#E8DDD0',
-  accent: '#B08A57',      // Dorado/Ocre
+  accent: '#B08A57',
   surface: '#FFFFFF',
   border: 'rgba(58, 58, 58, 0.18)',
 };
@@ -66,34 +65,48 @@ export default function ReportScreen() {
     setIsLoading(true);
 
     try {
-      // 1. Convertir la imagen local a un Blob para subirla a Storage
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
+      // Obtener ubicación GPS
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'Se requiere permiso de ubicación para enviar el reporte con precisión.');
+        setIsLoading(false);
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({});
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = function() {
+          resolve(xhr.response);
+        };
+        xhr.onerror = function(e) {
+          console.log(e);
+          reject(new TypeError("Network request failed"));
+        };
+        xhr.responseType = "blob";
+        xhr.open("GET", imageUri, true);
+        xhr.send(null);
+      });
+      
       const filename = imageUri.substring(imageUri.lastIndexOf('/') + 1);
       const storageRef = ref(storage, `reports/img_${Date.now()}_${filename}`);
       
-      // 2. Subir imagen a Firebase Storage
       await uploadBytes(storageRef, blob);
       const publicUrl = await getDownloadURL(storageRef);
 
-      // 3. Llamar a la Cloud Function de Gemini para analizar la imagen
-      const analyzeIncident = httpsCallable(functions, 'analyzeIncident');
-      const geminiResult = await analyzeIncident({ imageUrl: publicUrl, incidentType: selectedIncident.label });
-      const geminiAnalysis = (geminiResult.data as any)?.analysis || "Análisis no disponible";
-
-      // 4. Guardar el reporte completo en Firestore
       await addDoc(collection(db, 'reports'), {
+        userId: auth.currentUser?.uid || 'anonymous',
         incidentType: selectedIncident.label,
         description: description,
         imageUrl: publicUrl,
-        geminiAnalysis: geminiAnalysis,
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
         createdAt: serverTimestamp(),
-        status: 'pending', // pending, verified, rejected
+        status: 'pending',
       });
 
-      Alert.alert('¡Éxito!', 'Tu reporte ha sido enviado y verificado exitosamente.');
+      Alert.alert('¡Éxito!', 'Tu reporte ha sido enviado exitosamente y está pendiente de revisión.');
       
-      // Limpiar formulario
       setSelectedIncident(null);
       setDescription('');
       setImageUri(null);
@@ -115,7 +128,6 @@ export default function ReportScreen() {
       <Text style={styles.title}>Nuevo Reporte</Text>
       
       <Text style={styles.label}>Tipo de Incidente</Text>
-      {/* Dropdown Customizado Inline */}
       <TouchableOpacity 
         style={[styles.dropdownButton, isDropdownOpen ? styles.dropdownButtonOpen : null]} 
         onPress={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -131,7 +143,6 @@ export default function ReportScreen() {
         <Ionicons name={isDropdownOpen ? "chevron-up" : "chevron-down"} size={20} color={WebColors.foreground} />
       </TouchableOpacity>
 
-      {/* Lista de opciones desplegada directamente, sin oscurecer pantalla */}
       {isDropdownOpen ? (
         <View style={styles.inlineDropdownList}>
           {INCIDENT_OPTIONS.map((item, index) => (
@@ -180,7 +191,6 @@ export default function ReportScreen() {
         numberOfLines={4}
       />
 
-      {/* Botón con contorno */}
       <TouchableOpacity 
         style={[styles.submitButtonOutline, isLoading && styles.submitButtonDisabled]} 
         onPress={handleSubmit}
@@ -280,7 +290,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderWidth: 2,
     borderColor: WebColors.primary,
-    height: 60, // Fixed height to avoid jumping during loading
+    height: 60,
   },
   submitButtonDisabled: {
     opacity: 0.6,

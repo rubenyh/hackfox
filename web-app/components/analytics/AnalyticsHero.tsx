@@ -6,6 +6,13 @@ type AnalyticsHeroProps = {
 };
 
 export function AnalyticsHero({ actionsCount, isSimulated = false }: AnalyticsHeroProps) {
+  const handleOptimizeRed = () => {
+    document.getElementById("ai-transit-planner")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
   return (
     <section className="analytics-hero gov-card p-8 md:p-10">
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
@@ -33,6 +40,7 @@ export function AnalyticsHero({ actionsCount, isSimulated = false }: AnalyticsHe
           </div>
           <button
             type="button"
+            onClick={handleOptimizeRed}
             className="rounded-full bg-white/90 px-5 py-3 text-sm font-semibold text-primary shadow-lg transition hover:bg-white"
           >
             Optimizar red

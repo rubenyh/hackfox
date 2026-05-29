@@ -39,6 +39,7 @@ export default function AnalyticsPage() {
     forecastRows,
     forecastColumns,
     aiActions,
+    transitProjection,
     topRoutesAttention,
     isSimulated,
   } = useAnalyticsData();
@@ -70,7 +71,7 @@ export default function AnalyticsPage() {
 
         <section className="grid gap-6 lg:grid-cols-2">
           <DemandForecastingCard rows={forecastRows} columns={forecastColumns} />
-          <AITransitPlannerCard actions={aiActions} />
+          <AITransitPlannerCard actions={aiActions} projection={transitProjection} />
         </section>
 
         <TopRoutesAttentionSection routes={topRoutesAttention} columns={routeHealthColumns} />

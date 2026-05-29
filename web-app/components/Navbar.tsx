@@ -24,7 +24,7 @@ const navItems = [
   { href: "/analytics", label: "Optimizacion", icon: Sparkles },
   { href: "/buses", label: "Buses", icon: Bus },
   { href: "/drivers", label: "Conductores", icon: UserCheck },
-  { href: "/potholes", label: "Baches", icon: AlertTriangle },
+  { href: "/potholes", label: "Reportes", icon: AlertTriangle },
   { href: "/occupancy", label: "Ocupación", icon: Users },
 ];
 

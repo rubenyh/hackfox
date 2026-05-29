@@ -17,6 +17,18 @@ export type PotholeData = {
   lastReported: string;
 };
 
+export type ReportData = {
+  id?: string;
+  userId?: string;
+  incidentType: string;
+  description: string;
+  imageUrl?: string;
+  latitude: number;
+  longitude: number;
+  createdAt?: string | number | { toDate: () => Date } | null;
+  status: string;
+};
+
 export type OccupancyMetric = {
   routeId: string;
   routeName: string;

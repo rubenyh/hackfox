@@ -1,32 +1,63 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+import { setGlobalOptions } from "firebase-functions";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as logger from "firebase-functions/logger";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-import {setGlobalOptions} from "firebase-functions";
-// import {onRequest} from "firebase-functions/https";
-// import * as logger from "firebase-functions/logger";
-
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
-
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
+// Inicializar de forma global para reuso
 setGlobalOptions({ maxInstances: 10 });
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+// Extraer API Key de variables de entorno (definidas en functions/.env)
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+
+export const analyzeIncident = onCall(async (request) => {
+  const { imageUrl, incidentType } = request.data;
+
+  if (!imageUrl) {
+    throw new HttpsError("invalid-argument", "Falta la URL de la imagen.");
+  }
+
+  if (!GEMINI_API_KEY) {
+    logger.error("GEMINI_API_KEY no configurada.");
+    throw new HttpsError("internal", "Error de configuración de servidor.");
+  }
+
+  try {
+    logger.info(`Analizando imagen para incidente: ${incidentType}`);
+    
+    // 1. Descargamos la imagen de la URL como array buffer
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    const base64Data = Buffer.from(arrayBuffer).toString('base64');
+
+    // 2. Instanciamos Gemini
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // 3. Preparamos el prompt
+    const prompt = `Esta es una imagen de un reporte ciudadano de Tijuana sobre: "${incidentType}". 
+    Por favor, analiza la imagen y confirma de forma concisa si efectivamente muestra este problema de accesibilidad urbana.
+    Si ves claramente la barrera o daño, descríbelo en una o dos oraciones para agregar contexto al reporte. Si la foto no parece mostrar el problema, indícalo también.`;
+
+    const imagePart = {
+      inlineData: {
+        data: base64Data,
+        mimeType: response.headers.get("content-type") || "image/jpeg"
+      }
+    };
+
+    // 4. Llamamos a Gemini
+    const result = await model.generateContent([prompt, imagePart]);
+    const textResponse = result.response.text();
+
+    logger.info("Análisis de Gemini completado con éxito.");
+
+    return { analysis: textResponse };
+
+  } catch (error: any) {
+    logger.error("Error al analizar con Gemini", error);
+    throw new HttpsError("internal", "No se pudo completar el análisis de la imagen.", error.message);
+  }
+});

@@ -20,6 +20,7 @@ import { auth } from "@/lib/firebase/firebase";
 
 type AuthContextValue = {
   user: User | null;
+  role: string | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -29,6 +30,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,7 +47,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
         if (!isActive) return;
         setUser(firebaseUser);
-        setLoading(false);
+        if (!firebaseUser) {
+          setRole(null);
+          setLoading(false);
+          return;
+        }
+
+        firebaseUser
+          .getIdTokenResult()
+          .then((result) => {
+            if (!isActive) return;
+            setRole((result.claims.role as string | undefined) || null);
+            setLoading(false);
+          })
+          .catch(() => {
+            if (!isActive) return;
+            setRole(null);
+            setLoading(false);
+          });
       });
     };
 
@@ -64,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      role,
       loading,
       signInWithEmail: async (email, password) => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -72,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await firebaseSignOut(auth);
       },
     }),
-    [user, loading]
+    [user, role, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

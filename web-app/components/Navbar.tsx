@@ -10,6 +10,8 @@ import {
   TrendingUp,
   AlertTriangle,
   Users,
+  Bus,
+  UserCheck,
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
@@ -19,6 +21,8 @@ import {
 const navItems = [
   { href: "/", label: "Dashboard", icon: Activity },
   { href: "/routes", label: "Rutas", icon: TrendingUp },
+  { href: "/buses", label: "Buses", icon: Bus },
+  { href: "/drivers", label: "Conductores", icon: UserCheck },
   { href: "/potholes", label: "Baches", icon: AlertTriangle },
   { href: "/occupancy", label: "Ocupación", icon: Users },
 ];

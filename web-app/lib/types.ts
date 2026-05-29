@@ -31,3 +31,30 @@ export type DashboardKPI = {
   change?: number;
   icon?: string;
 };
+
+export type Bus = {
+  id: string;
+  plate: string;
+  capacity: number;
+  routeId?: string | null;
+  createdAt?: string;
+};
+
+export type DriverProfile = {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  license?: string;
+  assignedBusId?: string | null;
+  active?: boolean;
+  createdAt?: string;
+};
+
+export type RouteStop = {
+  id: string;
+  stopId: string;
+  routeId: string;
+  lat: number;
+  lng: number;
+};

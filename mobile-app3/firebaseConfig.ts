@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
 import { getAuth } from 'firebase/auth';
@@ -21,6 +21,6 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
 // Exportamos las instancias para usarlas en la app
-export const db = getFirestore(app);
+export const rtdb = getDatabase(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app);

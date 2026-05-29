@@ -8,8 +8,8 @@ import { useAccessibility } from '@/context/AccessibilityContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoutes } from '@/hooks/use-routes';
 import { calculateTransitRoute, Destination, TransitRouteResult } from '@/utils/routing';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
+import { ref, onValue } from 'firebase/database';
+import { rtdb } from '../../firebaseConfig';
 import { BusSimulator } from '@/components/BusSimulator';
 import { useGeocoding } from '@/hooks/use-geocoding';
 
@@ -50,13 +50,25 @@ export default function MapScreen() {
   }, [announce]);
 
   useEffect(() => {
-    // Escuchar la colección de camiones (hardware de Ever) en tiempo real
-    const unsubscribe = onSnapshot(collection(db, 'active_buses'), (snapshot) => {
-      const buses: any[] = [];
-      snapshot.forEach((doc) => {
-        buses.push({ id: doc.id, ...doc.data() });
-      });
-      setActiveBuses(buses);
+    // Escuchar la ruta de camiones activos en Firebase RTDB en tiempo real
+    console.log('[MapScreen] Conectando a Firebase RTDB en: /active_buses/data');
+    const busesRef = ref(rtdb, '/active_buses/data');
+    const unsubscribe = onValue(busesRef, (snapshot) => {
+      const data = snapshot.val();
+      console.log('[MapScreen] Datos recibidos de Firebase:', data);
+      if (data) {
+        // Si es un objeto singular (un solo camión)
+        const buses = Array.isArray(data)
+          ? data
+          : [{ id: data.busId, ...data }];
+        console.log('[MapScreen] Buses procesados:', buses.length, buses);
+        setActiveBuses(buses);
+      } else {
+        console.log('[MapScreen] No hay datos en /active_buses/data');
+        setActiveBuses([]);
+      }
+    }, (error) => {
+      console.error('[MapScreen] Error conectando a Firebase:', error);
     });
 
     return () => unsubscribe();
@@ -294,25 +306,31 @@ export default function MapScreen() {
             accessibilityHint={`Latitud: ${selectedDestination.latitude.toFixed(2)}, Longitud: ${selectedDestination.longitude.toFixed(2)}`}
           />
         )}
-        {activeBuses.map((bus) => (
-          <Marker
-            key={bus.id}
-            coordinate={{ latitude: bus.latitude, longitude: bus.longitude }}
-            title={bus.routeName}
-            description={`Velocidad: ${bus.speed} km/h ${bus.status === 'anomaly' ? '- ¡ANOMALÍA/BACHE!' : ''}`}
-            accessible={true}
-            accessibilityRole="image"
-            accessibilityLabel={`Camión ${bus.routeName} en movimiento`}
-          >
-            <View style={[
-              styles.busMarker, 
-              bus.status === 'delayed' ? styles.busDelayed : null,
-              bus.status === 'anomaly' ? styles.busAnomaly : null
-            ]}>
-              <Ionicons name="bus" size={16} color="white" accessible={false} />
-            </View>
-          </Marker>
-        ))}
+        {activeBuses.map((bus) => {
+          if (!bus || bus.latitude === undefined || bus.longitude === undefined) {
+            console.warn('Bus inválido:', bus);
+            return null;
+          }
+          return (
+            <Marker
+              key={bus.id}
+              coordinate={{ latitude: bus.latitude, longitude: bus.longitude }}
+              title={bus.routeName || 'Camión'}
+              description={`Velocidad: ${bus.speed || 0} km/h ${bus.status === 'anomaly' ? '- ¡ANOMALÍA/BACHE!' : ''}`}
+              accessible={true}
+              accessibilityRole="image"
+              accessibilityLabel={`Camión ${bus.routeName || 'desconocido'} en movimiento`}
+            >
+              <View style={[
+                styles.busMarker,
+                bus.status === 'delayed' ? styles.busDelayed : null,
+                bus.status === 'anomaly' ? styles.busAnomaly : null
+              ]}>
+                <Ionicons name="bus" size={16} color="white" accessible={false} />
+              </View>
+            </Marker>
+          );
+        })}
         {transitRoute && (
           <>
             <Polyline

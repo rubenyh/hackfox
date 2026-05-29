@@ -203,9 +203,42 @@ export default function ReportScreen() {
             </TouchableOpacity>
           ))}
         </View>
+      ) : null}
+
+      <Text style={styles.label} accessible={true} accessibilityRole="header">
+        Foto del Incidente
+      </Text>
+      {imageUri ? (
+        <View style={styles.imagePreviewContainer} accessible={true} accessibilityRole="image" accessibilityLabel="Foto del incidente tomada">
+          <Image source={{ uri: imageUri }} style={styles.imagePreview} accessible={false} />
+          <TouchableOpacity
+            style={styles.reTakePhotoButton}
+            onPress={takePhoto}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Tomar otra foto"
+          >
+            <Ionicons name="camera" size={16} color={WebColors.surface} accessible={false} />
+            <Text style={styles.reTakePhotoText} accessible={false}>Retomar</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={styles.photoButton}
+          onPress={takePhoto}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Tomar foto del incidente"
+          accessibilityHint="Toca para abrir la cámara"
+        >
+          <Ionicons name="camera" size={40} color={WebColors.primary} accessible={false} />
+          <Text style={styles.photoButtonText} accessible={false}>Tomar Foto en Vivo</Text>
+        </TouchableOpacity>
       )}
 
-      <Text style={styles.label}>Descripción</Text>
+      <Text style={styles.label} accessible={true} accessibilityRole="header">
+        Descripción
+      </Text>
       <TextInput
         style={[styles.input, styles.textArea]}
         placeholder="Describe el problema en detalle..."
@@ -221,14 +254,19 @@ export default function ReportScreen() {
 
       {/* Botón con contorno */}
       <TouchableOpacity
-        style={styles.submitButtonOutline}
+        style={[styles.submitButtonOutline, isLoading && styles.submitButtonDisabled]}
         onPress={handleSubmit}
+        disabled={isLoading}
         accessible={true}
         accessibilityRole="button"
         accessibilityLabel="Enviar Reporte"
         accessibilityHint="Envía el reporte del incidente"
       >
-        <Text style={styles.submitButtonTextOutline} accessible={false}>Enviar Reporte</Text>
+        {isLoading ? (
+          <ActivityIndicator size="small" color={WebColors.primary} />
+        ) : (
+          <Text style={styles.submitButtonTextOutline} accessible={false}>Enviar Reporte</Text>
+        )}
       </TouchableOpacity>
 
     </ScrollView>

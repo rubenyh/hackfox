@@ -14,6 +14,7 @@ import type {
   HeatmapPoint,
   OverlapRow,
   RecommendationItem,
+  TransitProjection,
   RouteHealthRow,
   TravelRow,
 } from "@/components/analytics/types";
@@ -60,6 +61,7 @@ export type AnalyticsData = {
     render?: (val: any) => ReactNode;
   }>;
   aiActions: string[];
+  transitProjection: TransitProjection;
   topRoutesAttention: RouteHealthRow[];
   isSimulated: boolean;
 };
@@ -421,6 +423,36 @@ export function useAnalyticsData(): AnalyticsData {
     return actions.slice(0, 6);
   }, [capacityRecommendations, fleetRecommendations, coverageRows, overlapRows]);
 
+  const transitProjection = useMemo<TransitProjection>(() => {
+    const capacityPressure = capacityRecommendations.reduce((sum, recommendation) => {
+      const route = routeHealth.find((item) => item.routeName === recommendation.routeName);
+      if (!route) return sum;
+
+      return sum + Math.max(0, route.averageOccupancy - 80) + Math.max(0, route.peakOccupancy - 90) / 2;
+    }, 0);
+
+    const capacityIncrease = Math.min(
+      25,
+      Math.max(0, Math.round(capacityPressure / Math.max(1, capacityRecommendations.length || 1)))
+    );
+    const waitReduction = Math.min(18, Math.round(capacityIncrease * 0.7 + capacityRecommendations.length * 1.5));
+    const costReduction = Math.min(
+      20,
+      Math.round((fleetRecommendations.length / Math.max(1, buses.length)) * 100 * 0.6)
+    );
+    const confidence = Math.min(
+      98,
+      Math.max(55, Math.round(routeHealth.reduce((sum, route) => sum + route.reliability, 0) / Math.max(1, routeHealth.length)))
+    );
+
+    return {
+      capacityIncrease,
+      waitReduction,
+      costReduction,
+      confidence,
+    };
+  }, [capacityRecommendations, fleetRecommendations, routeHealth, buses.length]);
+
   const demandHighlights = useMemo<DemandHighlights>(() => {
     const highDemand = routeHealth
       .filter((route) => route.averageOccupancy >= 80)
@@ -522,6 +554,7 @@ export function useAnalyticsData(): AnalyticsData {
     forecastRows,
     forecastColumns,
     aiActions,
+    transitProjection,
     topRoutesAttention,
     isSimulated,
   };

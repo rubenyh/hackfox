@@ -54,6 +54,13 @@ export type RecommendationItem = {
   recommendation: string;
 };
 
+export type TransitProjection = {
+  capacityIncrease: number;
+  waitReduction: number;
+  costReduction: number;
+  confidence: number;
+};
+
 export type DemandHighlights = {
   highDemand: string[];
   lowDemand: string[];

@@ -214,6 +214,10 @@ export default function PotholesPage() {
 
                   <div className="grid gap-2 text-sm gov-text-muted">
                     <div className="flex items-center gap-2">
+                      <AlertTriangle size={16} className="gov-text-accent" />
+                      <span>{report.incidentType || "Sin tipo de incidente"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <MapPin size={16} className="gov-text-accent" />
                       <span>{report.latitude.toFixed(5)}, {report.longitude.toFixed(5)}</span>
                     </div>
@@ -277,6 +281,13 @@ export default function PotholesPage() {
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] gov-text-muted">Estado</p>
                     <p className="mt-2 text-sm font-semibold gov-text-tertiary sm:text-base">{formatReportStatus(selectedReport.status)}</p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
+                    <p className="text-xs uppercase tracking-[0.2em] gov-text-muted">Tipo de incidente</p>
+                    <p className="mt-2 flex items-center gap-2 text-sm font-semibold gov-text-tertiary sm:text-base">
+                      <AlertTriangle size={16} className="gov-text-accent" />
+                      {selectedReport.incidentType || "Sin tipo de incidente"}
+                    </p>
                   </div>
                 </div>
 

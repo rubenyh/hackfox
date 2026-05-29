@@ -43,7 +43,7 @@ The heart of Hackfox is a sophisticated routing engine that calculates the optim
 
 ## Demo
 
-![Hackfox Mobile App Demo](./readme_assets/WhatsApp%20Video%202026-05-29%20at%2010.04.23%20AM.gif)
+![Hackfox Mobile App Demo](./../readme_assets/WhatsApp%20Video%202026-05-29%20at%2010.04.23%20AM.gif)
 
 ---
 

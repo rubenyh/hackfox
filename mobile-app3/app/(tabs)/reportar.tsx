@@ -53,7 +53,7 @@ export default function ReportScreen() {
       <Text style={styles.label}>Tipo de Incidente</Text>
       {/* Dropdown Customizado Inline */}
       <TouchableOpacity 
-        style={[styles.dropdownButton, isDropdownOpen && styles.dropdownButtonOpen]} 
+        style={[styles.dropdownButton, isDropdownOpen ? styles.dropdownButtonOpen : null]} 
         onPress={() => setIsDropdownOpen(!isDropdownOpen)}
       >
         {selectedIncident ? (
@@ -68,14 +68,14 @@ export default function ReportScreen() {
       </TouchableOpacity>
 
       {/* Lista de opciones desplegada directamente, sin oscurecer pantalla */}
-      {isDropdownOpen && (
+      {isDropdownOpen ? (
         <View style={styles.inlineDropdownList}>
           {INCIDENT_OPTIONS.map((item, index) => (
             <TouchableOpacity 
               key={item.id}
               style={[
                 styles.optionItem, 
-                index === INCIDENT_OPTIONS.length - 1 && { borderBottomWidth: 0 }
+                index === INCIDENT_OPTIONS.length - 1 ? { borderBottomWidth: 0 } : null
               ]}
               onPress={() => {
                 setSelectedIncident(item);
@@ -87,7 +87,7 @@ export default function ReportScreen() {
             </TouchableOpacity>
           ))}
         </View>
-      )}
+      ) : null}
 
       <Text style={styles.label}>Descripción</Text>
       <TextInput

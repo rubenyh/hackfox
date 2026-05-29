@@ -1,5 +1,14 @@
 rules_version = '2';
 
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if
+          request.time < timestamp.date(2026, 6, 27);
+    }
+  }
+}
+
 service cloud.firestore {
   match /databases/{database}/documents {
     function isSignedIn() {
@@ -61,8 +70,7 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      allow read: if isAdmin()
-        || (isSignedIn() && request.auth.uid == resource.data.userId);
+      allow read: if isSignedIn();
       allow create: if (isUser() && isValidReportCreate()) || isAdmin();
       allow update, delete: if isAdmin();
     }
@@ -73,6 +81,17 @@ service cloud.firestore {
     }
 
     match /routeStops/{stopId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /potholes/{potholeId} {
+      allow read: if isSignedIn();
+      allow create: if isUser() || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    match /occupancyMetrics/{metricId} {
       allow read: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }

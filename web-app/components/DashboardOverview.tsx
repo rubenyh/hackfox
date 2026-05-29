@@ -2,15 +2,57 @@
 
 import { KPICard } from "@/components/KPICard";
 import { DataTable } from "@/components/DataTable";
-import { mockRoutes, mockPotholes } from "@/lib/mockData";
+import { db } from "@/lib/firebase/firebase";
+import { PotholeData, Route } from "@/lib/types";
 import { TrendingUp, AlertTriangle, Users } from "lucide-react";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
 
 export function DashboardOverview() {
-  const totalBaches = mockPotholes.reduce((sum, p) => sum + p.potholesCount, 0);
-  const avgOccupancy = Math.round(
-    mockRoutes.reduce((sum, r) => sum + r.averageOccupancy, 0) / mockRoutes.length
+  const [routes, setRoutes] = useState<Route[]>([]);
+  const [potholes, setPotholes] = useState<PotholeData[]>([]);
+
+  useEffect(() => {
+    const routesRef = query(collection(db, "routes"), orderBy("name"));
+    const potholesRef = query(collection(db, "potholes"), orderBy("potholesCount", "desc"));
+
+    const unsubRoutes = onSnapshot(routesRef, (snapshot) => {
+      const next = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<Route, "id">),
+      }));
+      setRoutes(next);
+    });
+
+    const unsubPotholes = onSnapshot(potholesRef, (snapshot) => {
+      const next = snapshot.docs.map((doc) => ({
+        ...(doc.data() as PotholeData),
+      }));
+      setPotholes(next);
+    });
+
+    return () => {
+      unsubRoutes();
+      unsubPotholes();
+    };
+  }, []);
+
+  const totalBaches = useMemo(
+    () => potholes.reduce((sum, p) => sum + p.potholesCount, 0),
+    [potholes]
   );
-  const totalDailyTrips = mockRoutes.reduce((sum, r) => sum + r.dailyTrips, 0);
+
+  const avgOccupancy = useMemo(() => {
+    if (routes.length === 0) return 0;
+    return Math.round(
+      routes.reduce((sum, r) => sum + r.averageOccupancy, 0) / routes.length
+    );
+  }, [routes]);
+
+  const totalDailyTrips = useMemo(
+    () => routes.reduce((sum, r) => sum + r.dailyTrips, 0),
+    [routes]
+  );
 
   const routeColumns = [
     { key: "name" as const, label: "Ruta", width: "w-1/4" },
@@ -58,20 +100,20 @@ export function DashboardOverview() {
         />
         <KPICard
           label="Rutas Activas"
-          value={mockRoutes.length}
+          value={routes.length}
           icon={<TrendingUp size={24} />}
         />
       </div>
 
       <div className="space-y-4">
         <h3 className="text-xl font-bold gov-text-tertiary">Rutas Principales</h3>
-        <DataTable data={mockRoutes} columns={routeColumns} />
+        <DataTable data={routes} columns={routeColumns} />
       </div>
 
       <div className="space-y-4">
         <h3 className="text-xl font-bold gov-text-tertiary">Rutas con Más Baches</h3>
         <DataTable
-          data={mockPotholes.slice(0, 5)}
+          data={potholes.slice(0, 5)}
           columns={[
             { key: "routeName" as const, label: "Ruta" },
             { key: "potholesCount" as const, label: "Cantidad de Baches" },

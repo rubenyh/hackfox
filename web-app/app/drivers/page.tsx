@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 export default function DriversPage() {
   const { role } = useAuth();
   const isAdmin = role === "admin";
+  const signedInEmail = auth.currentUser?.email ?? "";
   const [drivers, setDrivers] = useState<DriverProfile[]>([]);
   const [buses, setBuses] = useState<Bus[]>([]);
   const [fullName, setFullName] = useState("");
@@ -155,7 +156,6 @@ export default function DriversPage() {
                   onChange={(event) => setFullName(event.target.value)}
                   required
                   className="w-full rounded-2xl border border-transparent bg-[var(--surface)] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                  placeholder="Juan Perez"
                 />
               </div>
               <div className="space-y-2">
@@ -167,7 +167,7 @@ export default function DriversPage() {
                   onChange={(event) => setEmail(event.target.value)}
                   required
                   className="w-full rounded-2xl border border-transparent bg-[var(--surface)] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                  placeholder="conductor@municipio.gob"
+                  placeholder={signedInEmail}
                 />
               </div>
             </div>

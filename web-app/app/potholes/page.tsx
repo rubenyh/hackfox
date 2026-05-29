@@ -2,13 +2,38 @@
 
 import { DataTable } from "@/components/DataTable";
 import { KPICard } from "@/components/KPICard";
-import { mockPotholes } from "@/lib/mockData";
+import { db } from "@/lib/firebase/firebase";
+import { PotholeData } from "@/lib/types";
 import { AlertTriangle } from "lucide-react";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
 
 export default function PotholesPage() {
-  const highSeverity = mockPotholes.filter((p) => p.severity === "high").length;
-  const mediumSeverity = mockPotholes.filter((p) => p.severity === "medium").length;
-  const totalPotholes = mockPotholes.reduce((sum, p) => sum + p.potholesCount, 0);
+  const [potholes, setPotholes] = useState<PotholeData[]>([]);
+
+  useEffect(() => {
+    const potholesRef = query(collection(db, "potholes"), orderBy("potholesCount", "desc"));
+    const unsubscribe = onSnapshot(potholesRef, (snapshot) => {
+      const next = snapshot.docs.map((doc) => ({
+        ...(doc.data() as PotholeData),
+      }));
+      setPotholes(next);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const highSeverity = useMemo(
+    () => potholes.filter((p) => p.severity === "high").length,
+    [potholes]
+  );
+  const mediumSeverity = useMemo(
+    () => potholes.filter((p) => p.severity === "medium").length,
+    [potholes]
+  );
+  const totalPotholes = useMemo(
+    () => potholes.reduce((sum, p) => sum + p.potholesCount, 0),
+    [potholes]
+  );
 
   const columns = [
     { key: "routeName" as const, label: "Ruta", width: "w-1/3" },
@@ -62,7 +87,7 @@ export default function PotholesPage() {
       <div className="space-y-4">
         <h3 className="text-xl font-bold gov-text-tertiary">Rutas Ordenadas por Cantidad de Baches</h3>
         <DataTable
-          data={mockPotholes.sort((a, b) => b.potholesCount - a.potholesCount)}
+          data={[...potholes].sort((a, b) => b.potholesCount - a.potholesCount)}
           columns={columns}
         />
       </div>

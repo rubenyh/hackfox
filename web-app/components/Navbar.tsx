@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import {
   Activity,
   TrendingUp,
@@ -14,11 +15,13 @@ import {
   PanelLeftOpen,
   LogOut,
   UserCircle,
+  Sparkles,
 } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Activity },
   { href: "/routes", label: "Rutas", icon: TrendingUp },
+  { href: "/analytics", label: "Optimizacion", icon: Sparkles },
   { href: "/buses", label: "Buses", icon: Bus },
   { href: "/drivers", label: "Conductores", icon: UserCheck },
   { href: "/potholes", label: "Baches", icon: AlertTriangle },
@@ -27,8 +30,12 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const userName = user?.displayName || "Usuario";
+  const userEmail = user?.email || "";
 
   const sidebarState = useMemo(
     () => (isCollapsed ? "collapsed" : "expanded"),
@@ -146,8 +153,8 @@ export function Navbar() {
           <div className="flex items-center gap-3 rounded-2xl bg-white/5 px-3 py-2">
             <UserCircle size={20} className="text-white/70" />
             <div className={`${isCollapsed ? "sr-only" : "block"}`}>
-              <p className="text-sm font-semibold text-white">name_placeholder</p>
-              <p className="text-xs text-white/60">email_placeholder</p>
+              {/* <p className="text-sm font-semibold text-white">{userName}</p> */}
+              <p className="text-xs text-white/60">{userEmail}</p>
             </div>
           </div>
           <button

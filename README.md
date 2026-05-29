@@ -77,7 +77,7 @@ Comprehensive analytics platform for transit authorities:
 
 ---
 
-### [Firebase Backend](/firebase)
+### [Firebase Backend](/firebase/README.md)
 **Real-Time Data Infrastructure & Cloud Functions**
 
 Enterprise backend powering both mobile and web clients:
@@ -95,11 +95,11 @@ Enterprise backend powering both mobile and web clients:
 - `functions/` - Cloud Functions for backend processing
 - `firestore.indexes.json` - Performance optimization indexes
 
-**Start here:** See [Firebase Configuration](/firebase)
+**Start here:** See [Firebase Configuration](/firebase/README.md)
 
 ---
 
-### [Hardware/IoT](/hardware)
+### [Hardware/IoT](/hardware/README.md)
 **Bus-Mounted Sensors & Data Collection**
 
 Real-time data acquisition from public transportation fleet:
@@ -113,7 +113,7 @@ Real-time data acquisition from public transportation fleet:
 - `test/` - Hardware testing utilities
 - `SCH_Schematic1_2026-05-28.pdf` - Circuit schematics and PCB design
 
-**Start here:** See [Hardware Configuration](//hardware/README.md)
+**Start here:** See [Hardware Configuration](/hardware/README.md)
 
 ---
 

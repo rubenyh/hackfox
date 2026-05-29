@@ -54,12 +54,12 @@ export default function RutasScreen() {
           >
             {showRoute && (
               <Polyline
-                coordinates={selectedRoute.stops.map(stop => ({
+                coordinates={selectedRoute.geometry.length > 0 ? selectedRoute.geometry : selectedRoute.stops.map(stop => ({
                   latitude: stop.lat,
                   longitude: stop.lon,
                 }))}
                 strokeColor={Colors.light.primary}
-                strokeWidth={3}
+                strokeWidth={6}
               />
             )}
             {selectedRoute.stops.map((stop, index) => (

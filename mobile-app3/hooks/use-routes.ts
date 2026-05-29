@@ -6,11 +6,17 @@ export interface RouteStop {
   id: string;
 }
 
+export interface RouteCoordinate {
+  latitude: number;
+  longitude: number;
+}
+
 export interface Route {
   ref: string;
   name: string;
   id: string;
   stops: RouteStop[];
+  geometry: RouteCoordinate[];
 }
 
 const routesData = require('../route-info/routes.json');
@@ -26,14 +32,51 @@ export function useRoutes() {
       routesData.elements.forEach((element: any) => {
         if (element.type === 'relation' && element.tags?.route === 'bus') {
           const stops: RouteStop[] = [];
+          const geometry: RouteCoordinate[] = [];
+          const addedCoords = new Set<string>();
 
           element.members.forEach((member: any) => {
-            if (member.role === 'stop' && member.lat && member.lon) {
-              stops.push({
-                lat: member.lat,
-                lon: member.lon,
-                id: `${element.id}-${member.ref}`,
+            if (member.role === 'stop') {
+              let lat, lon;
+
+              if (member.lat && member.lon) {
+                lat = member.lat;
+                lon = member.lon;
+              } else if (member.geometry && member.geometry.length > 0) {
+                lat = member.geometry[0].lat;
+                lon = member.geometry[0].lon;
+              }
+
+              if (lat && lon) {
+                stops.push({
+                  lat,
+                  lon,
+                  id: `${element.id}-${member.ref}`,
+                });
+              }
+            } else if (member.role === 'forward' && member.geometry) {
+              member.geometry.forEach((coord: any) => {
+                const key = `${coord.lat},${coord.lon}`;
+                if (!addedCoords.has(key)) {
+                  geometry.push({
+                    latitude: coord.lat,
+                    longitude: coord.lon,
+                  });
+                  addedCoords.add(key);
+                }
               });
+            } else if (member.role === 'backward' && member.geometry) {
+              for (let i = member.geometry.length - 1; i >= 0; i--) {
+                const coord = member.geometry[i];
+                const key = `${coord.lat},${coord.lon}`;
+                if (!addedCoords.has(key)) {
+                  geometry.push({
+                    latitude: coord.lat,
+                    longitude: coord.lon,
+                  });
+                  addedCoords.add(key);
+                }
+              }
             }
           });
 
@@ -43,6 +86,7 @@ export function useRoutes() {
               name: element.tags.name || `Route ${element.id}`,
               id: String(element.id),
               stops,
+              geometry,
             });
           }
         }

@@ -113,7 +113,7 @@ Real-time data acquisition from public transportation fleet:
 - `test/` - Hardware testing utilities
 - `SCH_Schematic1_2026-05-28.pdf` - Circuit schematics and PCB design
 
-**Start here:** See [Hardware Configuration](/hardware)
+**Start here:** See [Hardware Configuration](//hardware/README.md)
 
 ---
 

@@ -1,4 +1,4 @@
-# 🦊 Hackfox 2026
+# Hackfox 2026 - Mobile App
 
 **Real-time Transit Intelligence for Urban Navigation**
 
@@ -6,15 +6,15 @@ A cutting-edge React Native mobile application that revolutionizes how commuters
 
 ---
 
-## 🎯 Core Features
+## Core Features
 
-### 🗺️ Interactive Real-Time Map
+### Interactive Real-Time Map
 - Live visualization of active buses using Firebase Real-Time Database
 - GPS-powered user location tracking with automatic map centering
 - Dynamic route rendering with polyline visualization
 - Smooth map animations and responsive touch controls
 
-### 🚌 Intelligent Route Optimization
+### Intelligent Route Optimization
 The heart of Hackfox is a sophisticated routing engine that calculates the optimal transit path by:
 - Finding the nearest bus stops to both origin and destination
 - Computing realistic walking distances via Google Directions API
@@ -22,18 +22,18 @@ The heart of Hackfox is a sophisticated routing engine that calculates the optim
 - Balancing total journey time to minimize user walking distance
 - Capping bus estimates at realistic 10-20 minute intervals
 
-### 🚶 Smart Walking Route Planning
+### Smart Walking Route Planning
 - Integration with Google Directions API for accurate walking paths
 - Polyline decoding to render precise route geometry
 - Real-time distance and duration calculations
 - Fallback distance estimation using Haversine formula
 
-### 📍 Place Search & Geocoding
+### Place Search & Geocoding
 - Seamless destination searching with real-time suggestions
 - Place details and coordinate retrieval
 - Quick-select from recent searches
 
-### ♿ Accessibility First
+### Accessibility First
 - VoiceOver and screen reader support
 - Text-to-speech announcements for all navigation events
 - High-contrast UI mode support
@@ -41,7 +41,7 @@ The heart of Hackfox is a sophisticated routing engine that calculates the optim
 
 ---
 
-## 🏗️ Technical Architecture
+## Technical Architecture
 
 ### Technology Stack
 - **Frontend**: React 19 + React Native 0.81 with Expo 54
@@ -91,7 +91,7 @@ The central navigation interface featuring:
 
 ---
 
-## 🔧 Installation & Setup
+## Installation & Setup
 
 ```bash
 # Install dependencies
@@ -112,7 +112,7 @@ npm start         # Interactive menu
 
 ---
 
-## 🎮 How to Use
+## How to Use
 
 1. **Launch the app** — Grant location permissions
 2. **View the map** — See all active buses and your location
@@ -122,7 +122,7 @@ npm start         # Interactive menu
 
 ---
 
-## 🚀 Performance Features
+## Performance Features
 
 - **Lazy Loading**: Routes loaded on-demand from Firebase
 - **Debounced Search**: Prevents excessive API calls during typing
@@ -132,7 +132,7 @@ npm start         # Interactive menu
 
 ---
 
-## 📡 Real-Time Architecture
+## Real-Time Architecture
 
 The app connects to Firebase Realtime Database at `/active_buses/data` to stream live bus positions:
 
@@ -150,7 +150,7 @@ Updates flow instantly to the map for real-time tracking.
 
 ---
 
-## 🛠️ Development
+## Development
 
 ### Add a New Route Feature
 Edit `app/(tabs)/rutas.tsx` to display route schedules and details.
@@ -163,7 +163,7 @@ Fine-tune bus speed (60 km/h), walking speed assumptions, and caps in `utils/rou
 
 ---
 
-## 📦 Dependencies Highlight
+## Dependencies Highlight
 
 | Package | Purpose |
 |---------|---------|
@@ -175,12 +175,8 @@ Fine-tune bus speed (60 km/h), walking speed assumptions, and caps in `utils/rou
 
 ---
 
-## 🎯 Mission
+## Mission
 
 Hackfox empowers urban commuters with intelligent transit guidance, turning complex bus networks into simple, accessible, real-time journeys. Built for accessibility first, designed for efficiency, and engineered for scale.
 
-**Navigate smarter. Commute better. Fox the transit game.** 🦊
-
 ---
-
-*Built with ❤️ for urban navigation*

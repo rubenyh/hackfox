@@ -19,6 +19,7 @@ export default function MapScreen() {
   const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [activeBuses, setActiveBuses] = useState<any[]>([]);
+  const [selectedBus, setSelectedBus] = useState<any | null>(null);
   const [transitRoute, setTransitRoute] = useState<TransitRouteResult | null>(null);
   const [isTripActive, setIsTripActive] = useState(false);
   const [mapRegion, setMapRegion] = useState<{latitude: number, longitude: number} | null>(null);
@@ -390,17 +391,14 @@ export default function MapScreen() {
             return null;
           }
 
-          const passengerCount = bus.passengers || 0;
-
           return (
             <Marker
               key={bus.id || bus.busId}
               coordinate={{ latitude: bus.latitude, longitude: bus.longitude }}
-              title={bus.routeName || 'Camión'}
-              description={`Velocidad: ${bus.speed || 0} km/h | Pasajeros: ${passengerCount} ${bus.status === 'anomaly' ? '- ¡ANOMALÍA/BACHE!' : ''}`}
               accessible={true}
-              accessibilityRole="image"
-              accessibilityLabel={`Camión ${bus.routeName || 'desconocido'} con ${passengerCount} pasajeros`}
+              accessibilityRole="button"
+              accessibilityLabel={`Camión ${bus.routeName || 'desconocido'} - ${bus.passengers || 0} pasajeros`}
+              onPress={() => setSelectedBus(bus)}
             >
               <View style={[
                 styles.busMarker,
@@ -525,15 +523,15 @@ export default function MapScreen() {
               <Text style={styles.activeTripTitle}>Viaje en Curso</Text>
               <Text style={styles.activeTripETA}>ETA: {transitRoute.totalTime} min</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.panicButton} 
+            <TouchableOpacity
+              style={styles.panicButton}
               onPress={() => Alert.alert('🚨 Emergencia', 'Botón de pánico activado. Se ha notificado a emergencias y a tus contactos de seguridad con tu ubicación actual.')}
             >
               <Ionicons name="warning" size={28} color="white" />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity 
-            style={styles.endTripBtn} 
+          <TouchableOpacity
+            style={styles.endTripBtn}
             onPress={() => {
               setIsTripActive(false);
               setTransitRoute(null);
@@ -542,6 +540,69 @@ export default function MapScreen() {
           >
             <Text style={styles.endTripText}>Finalizar Viaje</Text>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {selectedBus && !isTripActive && (
+        <View style={styles.busInfoPanel}>
+          <View style={styles.busInfoHeader}>
+            <View>
+              <Text style={styles.busInfoTitle}>{selectedBus.routeName || 'Camión'}</Text>
+              <Text style={styles.busInfoSubtitle}>ID: {selectedBus.id || selectedBus.busId}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setSelectedBus(null)}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar información del camión"
+            >
+              <Ionicons name="close" size={24} color="#7A1F2B" accessible={false} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.busInfoContent}>
+            <View style={styles.infoRow}>
+              <Ionicons name="speedometer" size={20} color="#7A1F2B" />
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Velocidad</Text>
+                <Text style={styles.infoValue}>{selectedBus.speed || 0} km/h</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Ionicons name="people" size={20} color="#7A1F2B" />
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Pasajeros</Text>
+                <Text style={styles.infoValue}>{selectedBus.passengers || 0}</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Ionicons name="location" size={20} color="#7A1F2B" />
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Ubicación</Text>
+                <Text style={styles.infoValue}>{selectedBus.latitude?.toFixed(4)}, {selectedBus.longitude?.toFixed(4)}</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Ionicons name={selectedBus.status === 'anomaly' ? 'alert-circle' : selectedBus.status === 'delayed' ? 'time' : 'checkmark-circle'} size={20} color={selectedBus.status === 'anomaly' ? '#EB5757' : selectedBus.status === 'delayed' ? '#F2994A' : '#27AE60'} />
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Estado</Text>
+                <Text style={styles.infoValue}>{selectedBus.status === 'anomaly' ? 'Anomalía' : selectedBus.status === 'delayed' ? 'Retrasado' : 'Normal'}</Text>
+              </View>
+            </View>
+
+            {selectedBus.lastUpdated && (
+              <View style={styles.infoRow}>
+                <Ionicons name="time" size={20} color="#7A1F2B" />
+                <View style={styles.infoTextContainer}>
+                  <Text style={styles.infoLabel}>Última actualización</Text>
+                  <Text style={styles.infoValue}>{new Date(selectedBus.lastUpdated).toLocaleTimeString('es-MX')}</Text>
+                </View>
+              </View>
+            )}
+          </View>
         </View>
       )}
     </View>
@@ -750,10 +811,10 @@ const styles = StyleSheet.create({
     borderColor: 'white',
   },
   busDelayed: {
-    backgroundColor: '#F2994A', // Naranja
+    backgroundColor: '#F2994A',
   },
   busAnomaly: {
-    backgroundColor: '#EB5757', // Rojo
+    backgroundColor: '#EB5757',
   },
   activeTripPanel: {
     position: 'absolute',
@@ -810,5 +871,64 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  busInfoPanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  busInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(58, 58, 58, 0.1)',
+  },
+  busInfoTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#7A1F2B',
+  },
+  busInfoSubtitle: {
+    fontSize: 13,
+    color: '#999',
+    marginTop: 4,
+  },
+  busInfoContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    paddingBottom: 30,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  infoTextContainer: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: '#999',
+    textTransform: 'uppercase',
+  },
+  infoValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.light.text,
+    marginTop: 4,
   },
 });

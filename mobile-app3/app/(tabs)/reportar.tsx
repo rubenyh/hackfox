@@ -44,7 +44,10 @@ export default function ReportScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView 
+      style={{ backgroundColor: WebColors.background }}
+      contentContainerStyle={styles.container}
+    >
       <Text style={styles.title}>Nuevo Reporte</Text>
       
       <Text style={styles.label}>Tipo de Incidente</Text>

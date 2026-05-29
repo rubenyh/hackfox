@@ -41,6 +41,12 @@ The heart of Hackfox is a sophisticated routing engine that calculates the optim
 
 ---
 
+## Demo
+
+![Hackfox Mobile App Demo](./readme_assets/WhatsApp%20Video%202026-05-29%20at%2010.04.23%20AM.gif)
+
+---
+
 ## Technical Architecture
 
 ### Technology Stack
@@ -180,3 +186,4 @@ Fine-tune bus speed (60 km/h), walking speed assumptions, and caps in `utils/rou
 Hackfox empowers urban commuters with intelligent transit guidance, turning complex bus networks into simple, accessible, real-time journeys. Built for accessibility first, designed for efficiency, and engineered for scale.
 
 ---
+

@@ -1,33 +1,47 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useColorScheme } from 'react-native';
+// Colores de la Web-App
+const WebColors = {
+  background: '#F7F4EF',
+  primary: '#7A1F2B',     // Guinda (activo)
+  inactive: '#B08A57',    // Beige oscuro (inactivo)
+  border: 'rgba(58, 58, 58, 0.18)',
+};
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: WebColors.primary,
+        tabBarInactiveTintColor: WebColors.inactive,
+        tabBarStyle: {
+          backgroundColor: WebColors.background,
+          borderTopColor: WebColors.border,
+        },
         headerShown: false,
-        tabBarButton: HapticTab,
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Mapa',
+          tabBarIcon: ({ color }) => <Ionicons size={28} name="map" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="rutas"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Rutas',
+          tabBarIcon: ({ color }) => <Ionicons size={28} name="bus" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="reportar"
+        options={{
+          title: 'Reportar',
+          tabBarIcon: ({ color }) => <Ionicons size={28} name="megaphone" color={color} />,
         }}
       />
     </Tabs>

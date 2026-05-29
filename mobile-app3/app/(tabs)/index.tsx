@@ -6,6 +6,7 @@ import { Colors } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAccessibility } from '@/context/AccessibilityContext';
 import { useRoutes } from '@/hooks/use-routes';
+import { useGeocoding } from '@/hooks/use-geocoding';
 import { findNearestStops, getRoutesForStops, Destination, RecommendedStop, RecommendedRoute } from '@/utils/routing';
 
 export default function MapScreen() {
@@ -16,9 +17,12 @@ export default function MapScreen() {
   const [recommendedStops, setRecommendedStops] = useState<RecommendedStop[]>([]);
   const [recommendedRoutes, setRecommendedRoutes] = useState<RecommendedRoute[]>([]);
   const [showRecommendations, setShowRecommendations] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const mapRef = useRef<MapView>(null);
   const { announce } = useAccessibility();
   const { routes, loading } = useRoutes();
+  const { results, searching, searchPlace, clearResults } = useGeocoding();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -33,6 +37,12 @@ export default function MapScreen() {
       setLocation(loc);
       announce(`Ubicación obtenida. Latitud: ${loc.coords.latitude.toFixed(2)}, Longitud: ${loc.coords.longitude.toFixed(2)}`);
     })();
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, [announce]);
 
   const handleRecenter = () => {
@@ -73,6 +83,60 @@ export default function MapScreen() {
     }
   };
 
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (text.trim().length > 2) {
+      setShowSearchResults(true);
+      searchTimeoutRef.current = setTimeout(() => {
+        searchPlace(text);
+      }, 500) as unknown as NodeJS.Timeout;
+    } else {
+      clearResults();
+      setShowSearchResults(false);
+    }
+  };
+
+  const handleSelectSearchResult = (result: typeof results[0]) => {
+    const destination: Destination = {
+      latitude: result.latitude,
+      longitude: result.longitude,
+    };
+
+    setSelectedDestination(destination);
+    setSearchQuery('');
+    setShowSearchResults(false);
+    clearResults();
+
+    const stops = findNearestStops(destination, routes);
+    setRecommendedStops(stops);
+
+    if (mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: result.latitude,
+        longitude: result.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }, 500);
+    }
+
+    if (stops.length > 0) {
+      const routesForStops = getRoutesForStops(
+        stops.map(s => s.stop),
+        routes
+      );
+      setRecommendedRoutes(routesForStops);
+      setShowRecommendations(true);
+      announce(`Destino seleccionado: ${result.name}. Se encontraron ${stops.length} paradas cercanas y ${routesForStops.length} rutas recomendadas`);
+    } else {
+      announce(`Destino seleccionado: ${result.name}. No se encontraron paradas cercanas`);
+    }
+  };
+
   if (!location) {
     return (
       <View style={styles.center} accessible={true} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
@@ -89,21 +153,73 @@ export default function MapScreen() {
     <View style={styles.container}>
       {/* Buscador de rutas flotante */}
       <View
-        style={styles.searchContainer}
+        style={styles.searchContainerWrapper}
         accessible={true}
         accessibilityRole="search"
         accessibilityLabel="Área de búsqueda"
       >
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} accessible={false} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar ruta o ubicación..."
-          placeholderTextColor="#999"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          accessibilityLabel="Campo de búsqueda de rutas"
-          accessibilityHint="Escribe para buscar rutas o ubicaciones específicas"
-        />
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} accessible={false} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar ruta o ubicación..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            accessibilityLabel="Campo de búsqueda de rutas"
+            accessibilityHint="Escribe para buscar rutas o ubicaciones específicas"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery('');
+                setShowSearchResults(false);
+                clearResults();
+              }}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Limpiar búsqueda"
+            >
+              <Ionicons name="close-circle" size={20} color="#999" accessible={false} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Resultados de búsqueda */}
+        {showSearchResults && (results.length > 0 || searching) && (
+          <View style={styles.searchResultsContainer}>
+            {searching ? (
+              <View style={styles.searchLoadingContainer}>
+                <ActivityIndicator size="small" color="#7A1F2B" />
+                <Text style={styles.searchLoadingText} accessible={true}>Buscando...</Text>
+              </View>
+            ) : (
+              <FlatList
+                scrollEnabled={false}
+                data={results}
+                keyExtractor={(item, index) => `${item.latitude}-${item.longitude}-${index}`}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.searchResultItem}
+                    onPress={() => handleSelectSearchResult(item)}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.name}
+                    accessibilityHint={item.address || 'Toca para seleccionar'}
+                  >
+                    <Ionicons name="location" size={18} color="#7A1F2B" style={styles.resultIcon} accessible={false} />
+                    <View style={styles.resultTextContainer}>
+                      <Text style={styles.resultName} accessible={false}>{item.name}</Text>
+                      {item.address && (
+                        <Text style={styles.resultAddress} accessible={false}>{item.address}</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        )}
       </View>
 
       <MapView
@@ -284,18 +400,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
   },
-  searchContainer: {
+  searchContainerWrapper: {
     position: 'absolute',
     top: 60,
     left: 20,
     right: 20,
+    zIndex: 100,
+  },
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
     borderRadius: 12,
     paddingHorizontal: 15,
     height: 50,
-    zIndex: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -309,6 +427,52 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: Colors.light.text,
+  },
+  searchResultsContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    marginTop: 5,
+    maxHeight: 300,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  searchLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    gap: 10,
+  },
+  searchLoadingText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(58, 58, 58, 0.1)',
+  },
+  resultIcon: {
+    marginRight: 12,
+  },
+  resultTextContainer: {
+    flex: 1,
+  },
+  resultName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.light.text,
+  },
+  resultAddress: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
   },
   fab: {
     position: 'absolute',

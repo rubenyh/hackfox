@@ -57,13 +57,13 @@ export default function MapScreen() {
     const busesRef = ref(rtdb, '/active_buses/data');
     const unsubscribe = onValue(busesRef, (snapshot) => {
       const data = snapshot.val();
-      console.log('[MapScreen] Datos recibidos de Firebase:', data);
+      console.log('[MapScreen] Datos completos recibidos de Firebase:', JSON.stringify(data, null, 2));
       if (data) {
         // Si es un objeto singular (un solo camión)
         const buses = Array.isArray(data)
           ? data
           : [{ id: data.busId, ...data }];
-        console.log('[MapScreen] Buses procesados:', buses.length, buses);
+        console.log('[MapScreen] Buses procesados:', buses.length, JSON.stringify(buses, null, 2));
         setActiveBuses(buses);
       } else {
         console.log('[MapScreen] No hay datos en /active_buses/data');
@@ -75,6 +75,7 @@ export default function MapScreen() {
 
     return () => unsubscribe();
   }, []);
+
 
   const handleRecenter = () => {
     if (location && mapRef.current) {
@@ -388,15 +389,18 @@ export default function MapScreen() {
             console.warn('Bus inválido:', bus);
             return null;
           }
+
+          const passengerCount = bus.passengers || 0;
+
           return (
             <Marker
-              key={bus.id}
+              key={bus.id || bus.busId}
               coordinate={{ latitude: bus.latitude, longitude: bus.longitude }}
               title={bus.routeName || 'Camión'}
-              description={`Velocidad: ${bus.speed || 0} km/h ${bus.status === 'anomaly' ? '- ¡ANOMALÍA/BACHE!' : ''}`}
+              description={`Velocidad: ${bus.speed || 0} km/h | Pasajeros: ${passengerCount} ${bus.status === 'anomaly' ? '- ¡ANOMALÍA/BACHE!' : ''}`}
               accessible={true}
               accessibilityRole="image"
-              accessibilityLabel={`Camión ${bus.routeName || 'desconocido'} en movimiento`}
+              accessibilityLabel={`Camión ${bus.routeName || 'desconocido'} con ${passengerCount} pasajeros`}
             >
               <View style={[
                 styles.busMarker,

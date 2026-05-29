@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, Image, ActivityIndicator } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { db, storage, functions } from '../../firebaseConfig';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 // Colores extraídos de la Web-App
@@ -31,16 +36,75 @@ export default function ReportScreen() {
   const [selectedIncident, setSelectedIncident] = useState<IncidentOption | null>(null);
   const [description, setDescription] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = () => {
-    if (!selectedIncident || !description) {
-      Alert.alert('Error', 'Por favor selecciona el tipo de incidente y agrega una descripción.');
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permiso denegado', 'Necesitamos acceso a la cámara para tomar la foto en vivo.');
       return;
     }
-    Alert.alert('Éxito', 'Reporte enviado correctamente.');
-    setSelectedIncident(null);
-    setDescription('');
-    setIsDropdownOpen(false);
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedIncident || !description || !imageUri) {
+      Alert.alert('Error', 'Por favor selecciona el tipo de incidente, agrega una descripción y toma una foto en vivo.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // 1. Convertir la imagen local a un Blob para subirla a Storage
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      const filename = imageUri.substring(imageUri.lastIndexOf('/') + 1);
+      const storageRef = ref(storage, `reports/img_${Date.now()}_${filename}`);
+      
+      // 2. Subir imagen a Firebase Storage
+      await uploadBytes(storageRef, blob);
+      const publicUrl = await getDownloadURL(storageRef);
+
+      // 3. Llamar a la Cloud Function de Gemini para analizar la imagen
+      const analyzeIncident = httpsCallable(functions, 'analyzeIncident');
+      const geminiResult = await analyzeIncident({ imageUrl: publicUrl, incidentType: selectedIncident.label });
+      const geminiAnalysis = (geminiResult.data as any)?.analysis || "Análisis no disponible";
+
+      // 4. Guardar el reporte completo en Firestore
+      await addDoc(collection(db, 'reports'), {
+        incidentType: selectedIncident.label,
+        description: description,
+        imageUrl: publicUrl,
+        geminiAnalysis: geminiAnalysis,
+        createdAt: serverTimestamp(),
+        status: 'pending', // pending, verified, rejected
+      });
+
+      Alert.alert('¡Éxito!', 'Tu reporte ha sido enviado y verificado exitosamente.');
+      
+      // Limpiar formulario
+      setSelectedIncident(null);
+      setDescription('');
+      setImageUri(null);
+      setIsDropdownOpen(false);
+
+    } catch (error: any) {
+      console.error("Error enviando reporte:", error);
+      Alert.alert('Error de Envío', error.message || 'Hubo un problema al subir el reporte.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -89,6 +153,22 @@ export default function ReportScreen() {
         </View>
       ) : null}
 
+      <Text style={styles.label}>Evidencia Fotográfica</Text>
+      {imageUri ? (
+        <View style={styles.imagePreviewContainer}>
+          <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+          <TouchableOpacity style={styles.reTakePhotoButton} onPress={takePhoto}>
+            <Ionicons name="camera-reverse" size={20} color={WebColors.surface} />
+            <Text style={styles.reTakePhotoText}>Volver a tomar</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
+          <Ionicons name="camera" size={32} color={WebColors.primary} />
+          <Text style={styles.photoButtonText}>Tomar Foto en Vivo</Text>
+        </TouchableOpacity>
+      )}
+
       <Text style={styles.label}>Descripción</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -101,8 +181,16 @@ export default function ReportScreen() {
       />
 
       {/* Botón con contorno */}
-      <TouchableOpacity style={styles.submitButtonOutline} onPress={handleSubmit}>
-        <Text style={styles.submitButtonTextOutline}>Enviar Reporte</Text>
+      <TouchableOpacity 
+        style={[styles.submitButtonOutline, isLoading && styles.submitButtonDisabled]} 
+        onPress={handleSubmit}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <ActivityIndicator color={WebColors.primary} />
+        ) : (
+          <Text style={styles.submitButtonTextOutline}>Enviar Reporte</Text>
+        )}
       </TouchableOpacity>
 
     </ScrollView>
@@ -188,9 +276,14 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 10,
     borderWidth: 2,
     borderColor: WebColors.primary,
+    height: 60, // Fixed height to avoid jumping during loading
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
   submitButtonTextOutline: {
     color: WebColors.primary,
@@ -211,5 +304,51 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: WebColors.foreground,
+  },
+  photoButton: {
+    backgroundColor: WebColors.surface,
+    borderWidth: 1,
+    borderColor: WebColors.border,
+    borderRadius: 12,
+    padding: 24,
+    marginBottom: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderStyle: 'dashed',
+  },
+  photoButtonText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: WebColors.primary,
+    fontWeight: '600',
+  },
+  imagePreviewContainer: {
+    marginBottom: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: WebColors.border,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    resizeMode: 'cover',
+  },
+  reTakePhotoButton: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: WebColors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  reTakePhotoText: {
+    color: WebColors.surface,
+    marginLeft: 6,
+    fontWeight: 'bold',
   },
 });

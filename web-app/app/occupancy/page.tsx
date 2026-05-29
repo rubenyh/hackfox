@@ -1,7 +1,8 @@
 "use client";
 
 import { DataTable } from "@/components/DataTable";
-import { mockOccupancy } from "@/lib/mockData";
+import { db } from "@/lib/firebase/firebase";
+import { OccupancyMetric } from "@/lib/types";
 import {
   LineChart,
   Line,
@@ -12,23 +13,57 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
 
 export default function OccupancyPage() {
-  const chartData = [
-    { hour: "6:00", people: 25, capacity: 80 },
-    { hour: "7:00", people: 62, capacity: 80 },
-    { hour: "8:00", people: 78, capacity: 80 },
-    { hour: "9:00", people: 55, capacity: 80 },
-    { hour: "17:00", people: 72, capacity: 80 },
-    { hour: "18:00", people: 80, capacity: 80 },
-    { hour: "19:00", people: 68, capacity: 80 },
-    { hour: "20:00", people: 42, capacity: 80 },
-  ];
+  const [metrics, setMetrics] = useState<OccupancyMetric[]>([]);
 
-  const tableData = mockOccupancy.map(item => ({
-    ...item,
-    occupancy: Math.round((item.averagePeople / item.capacity) * 100)
-  }));
+  useEffect(() => {
+    const metricsRef = query(collection(db, "occupancyMetrics"), orderBy("hour"));
+    const unsubscribe = onSnapshot(metricsRef, (snapshot) => {
+      const next = snapshot.docs.map((doc) => ({
+        ...(doc.data() as OccupancyMetric),
+      }));
+      setMetrics(next);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const selectedRouteId = useMemo(() => {
+    if (metrics.length === 0) return "";
+    const counts = metrics.reduce<Record<string, number>>((acc, metric) => {
+      acc[metric.routeId] = (acc[metric.routeId] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || "";
+  }, [metrics]);
+
+  const selectedRouteName = useMemo(() => {
+    if (!selectedRouteId) return "";
+    return metrics.find((metric) => metric.routeId === selectedRouteId)?.routeName || "";
+  }, [metrics, selectedRouteId]);
+
+  const chartData = useMemo(() => {
+    if (!selectedRouteId) return [] as { hour: string; people: number; capacity: number }[];
+    return metrics
+      .filter((metric) => metric.routeId === selectedRouteId)
+      .sort((a, b) => a.hour - b.hour)
+      .map((metric) => ({
+        hour: `${metric.hour}:00`,
+        people: metric.averagePeople,
+        capacity: metric.capacity,
+      }));
+  }, [metrics, selectedRouteId]);
+
+  const tableData = useMemo(
+    () =>
+      metrics.map((item) => ({
+        ...item,
+        occupancy: item.capacity ? Math.round((item.averagePeople / item.capacity) * 100) : 0,
+      })),
+    [metrics]
+  );
 
   const columns = [
     { key: "routeName" as const, label: "Ruta" },
@@ -50,7 +85,9 @@ export default function OccupancyPage() {
       </div>
 
       <div className="gov-card p-6">
-        <h3 className="text-lg font-semibold gov-text-tertiary mb-4">Ocupación Diaria - Ruta Centro - Norte</h3>
+        <h3 className="text-lg font-semibold gov-text-tertiary mb-4">
+          Ocupación Diaria{selectedRouteName ? ` - ${selectedRouteName}` : ""}
+        </h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#D6CABB" />

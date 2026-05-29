@@ -70,8 +70,7 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      allow read: if isAdmin()
-        || (isSignedIn() && request.auth.uid == resource.data.userId);
+      allow read: if isSignedIn();
       allow create: if (isUser() && isValidReportCreate()) || isAdmin();
       allow update, delete: if isAdmin();
     }
@@ -88,7 +87,8 @@ service cloud.firestore {
 
     match /potholes/{potholeId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      allow create: if isUser() || isAdmin();
+      allow update, delete: if isAdmin();
     }
 
     match /occupancyMetrics/{metricId} {

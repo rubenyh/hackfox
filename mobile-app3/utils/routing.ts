@@ -186,12 +186,47 @@ export async function calculateTransitRoute(
     bestDestStop = bestRoute.stops[bestRoute.stops.length - 1];
   }
 
-  // Calculate bus travel time (simple estimation based on route geometry)
-  let busTime = 15; // default fallback
-  if (bestRoute.geometry && bestRoute.geometry.length > 0) {
-    // Estimate 40 km/h average speed
-    const totalRouteKm = bestRoute.geometry.length * 0.00005; // rough distance estimate
-    busTime = Math.ceil(totalRouteKm / 0.67); // 40 km/h = 0.67 km/min
+  // Calculate bus travel time based on route segment between origin and destination stops
+  let busTime = 10; // default fallback
+  if (bestRoute.geometry && bestRoute.geometry.length > 1) {
+    // Find geometry indices for stops to calculate only the relevant segment
+    let startIdx = 0;
+    let endIdx = bestRoute.geometry.length - 1;
+
+    // Find closest geometry point to origin stop
+    let minDistToOrigin = Infinity;
+    for (let i = 0; i < bestRoute.geometry.length; i++) {
+      const dist = calculateDistance(bestRoute.geometry[i], bestOriginStop);
+      if (dist < minDistToOrigin) {
+        minDistToOrigin = dist;
+        startIdx = i;
+      }
+    }
+
+    // Find closest geometry point to destination stop
+    let minDistToDest = Infinity;
+    for (let i = 0; i < bestRoute.geometry.length; i++) {
+      const dist = calculateDistance(bestRoute.geometry[i], bestDestStop);
+      if (dist < minDistToDest) {
+        minDistToDest = dist;
+        endIdx = i;
+      }
+    }
+
+    // Calculate distance only between origin and destination stops
+    let segmentDistanceKm = 0;
+    if (startIdx <= endIdx) {
+      for (let i = startIdx; i < endIdx; i++) {
+        segmentDistanceKm += calculateDistance(bestRoute.geometry[i], bestRoute.geometry[i + 1]);
+      }
+    }
+
+    // Use 60 km/h average speed = 1 km/min for realistic urban bus speeds
+    if (segmentDistanceKm > 0) {
+      busTime = Math.ceil(segmentDistanceKm / 1);
+      // Cap at 20 minutes maximum
+      busTime = Math.min(busTime, 20);
+    }
   }
 
   return {

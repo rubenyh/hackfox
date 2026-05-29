@@ -74,7 +74,6 @@ export default function ReportScreen() {
     setIsLoading(true);
 
     try {
-      // Obtener ubicación GPS
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permiso denegado', 'Se requiere permiso de ubicación para enviar el reporte con precisión.');
@@ -136,11 +135,8 @@ export default function ReportScreen() {
       accessible={true}
       accessibilityRole="list"
     >
-<<<<<<< HEAD
-=======
 
 
->>>>>>> main
       <Text
         style={styles.label}
         accessible={true}
@@ -249,7 +245,6 @@ export default function ReportScreen() {
         accessibilityHint="Escribe una descripción detallada del problema"
       />
 
-      {/* Botón con contorno */}
       <TouchableOpacity
         style={[styles.submitButtonOutline, isLoading && styles.submitButtonDisabled]}
         onPress={handleSubmit}

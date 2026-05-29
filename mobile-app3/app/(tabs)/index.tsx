@@ -7,8 +7,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAccessibility } from '@/context/AccessibilityContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoutes } from '@/hooks/use-routes';
-import { useGeocoding } from '@/hooks/use-geocoding';
 import { findNearestStops, getRoutesForStops, Destination, RecommendedStop, RecommendedRoute } from '@/utils/routing';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { BusSimulator } from '@/components/BusSimulator';
 
 export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -19,6 +21,7 @@ export default function MapScreen() {
   const [recommendedRoutes, setRecommendedRoutes] = useState<RecommendedRoute[]>([]);
   const [showRecommendations, setShowRecommendations] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [activeBuses, setActiveBuses] = useState<any[]>([]);
   const mapRef = useRef<MapView>(null);
   const { announce } = useAccessibility();
   const insets = useSafeAreaInsets();
@@ -46,6 +49,19 @@ export default function MapScreen() {
       }
     };
   }, [announce]);
+
+  useEffect(() => {
+    // Escuchar la colección de camiones (hardware de Ever) en tiempo real
+    const unsubscribe = onSnapshot(collection(db, 'active_buses'), (snapshot) => {
+      const buses: any[] = [];
+      snapshot.forEach((doc) => {
+        buses.push({ id: doc.id, ...doc.data() });
+      });
+      setActiveBuses(buses);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleRecenter = () => {
     if (location && mapRef.current) {
@@ -153,7 +169,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Buscador de rutas flotante */}
+      <BusSimulator />
       <View
         style={[styles.searchContainerWrapper, { top: insets.top + 16 }]}
         accessible={true}
@@ -197,7 +213,6 @@ export default function MapScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Resultados de búsqueda */}
         {showSearchResults && (results.length > 0 || searching) && (
           <View style={styles.searchResultsContainer}>
             {searching ? (
@@ -273,9 +288,27 @@ export default function MapScreen() {
             accessibilityHint={`Latitud: ${selectedDestination.latitude.toFixed(2)}, Longitud: ${selectedDestination.longitude.toFixed(2)}`}
           />
         )}
+        {activeBuses.map((bus) => (
+          <Marker
+            key={bus.id}
+            coordinate={{ latitude: bus.latitude, longitude: bus.longitude }}
+            title={bus.routeName}
+            description={`Velocidad: ${bus.speed} km/h ${bus.status === 'anomaly' ? '- ¡ANOMALÍA/BACHE!' : ''}`}
+            accessible={true}
+            accessibilityRole="image"
+            accessibilityLabel={`Camión ${bus.routeName} en movimiento`}
+          >
+            <View style={[
+              styles.busMarker, 
+              bus.status === 'delayed' ? styles.busDelayed : null,
+              bus.status === 'anomaly' ? styles.busAnomaly : null
+            ]}>
+              <Ionicons name="bus" size={16} color="white" accessible={false} />
+            </View>
+          </Marker>
+        ))}
       </MapView>
 
-      {/* Botón flotante para recentrar */}
       <TouchableOpacity
         style={styles.fab}
         onPress={handleRecenter}
@@ -287,7 +320,6 @@ export default function MapScreen() {
         <Ionicons name="locate" size={24} color="#7A1F2B" accessible={false} />
       </TouchableOpacity>
 
-      {/* Recomendaciones Modal */}
       <Modal
         visible={showRecommendations && selectedDestination !== null}
         animationType="slide"
@@ -299,7 +331,6 @@ export default function MapScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.recommendationPanel}>
-            {/* Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle} accessible={true} accessibilityRole="header">
                 Destino Seleccionado
@@ -318,7 +349,6 @@ export default function MapScreen() {
             </View>
 
             <ScrollView style={styles.modalContent}>
-              {/* Paradas Recomendadas */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle} accessible={true} accessibilityRole="header">
                   Paradas Cercanas ({recommendedStops.length})
@@ -347,7 +377,6 @@ export default function MapScreen() {
                 )}
               </View>
 
-              {/* Rutas Recomendadas */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle} accessible={true} accessibilityRole="header">
                   Rutas Recomendadas ({recommendedRoutes.length})
@@ -613,5 +642,18 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  busMarker: {
+    backgroundColor: '#B08A57',
+    padding: 6,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  busDelayed: {
+    backgroundColor: '#F2994A', // Naranja
+  },
+  busAnomaly: {
+    backgroundColor: '#EB5757', // Rojo
   },
 });

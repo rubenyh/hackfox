@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 
@@ -187,5 +188,155 @@ body {
   .gov-badge-low {
     background: var(--success-soft);
     color: var(--success);
+  }
+
+  .gov-badge-healthy {
+    background: rgba(61, 107, 79, 0.12);
+    color: #2f5a43;
+  }
+
+  .analytics-shell {
+    font-family: "Manrope", "Segoe UI", sans-serif;
+  }
+
+  .analytics-hero {
+    position: relative;
+    overflow: hidden;
+    border: none;
+    background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.35), transparent 45%),
+      linear-gradient(135deg, #6a1520 0%, #902a38 55%, #b08a57 120%);
+  }
+
+  .analytics-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      120deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.08) 2px,
+      transparent 2px,
+      transparent 14px
+    );
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .analytics-hero > * {
+    position: relative;
+  }
+
+  .analytics-map {
+    position: relative;
+    height: 220px;
+    border-radius: 20px;
+    background: radial-gradient(circle at 30% 30%, rgba(122, 31, 43, 0.4), transparent 45%),
+      radial-gradient(circle at 70% 60%, rgba(176, 138, 87, 0.45), transparent 50%),
+      linear-gradient(135deg, rgba(232, 221, 208, 0.8), rgba(255, 255, 255, 0.9));
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .analytics-map-grid {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(rgba(58, 58, 58, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(58, 58, 58, 0.08) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .analytics-map-pulse {
+    position: absolute;
+    left: 35%;
+    top: 30%;
+    width: 120px;
+    height: 120px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(122, 31, 43, 0.5), transparent 65%);
+    animation: analyticsPulse 6s ease-in-out infinite;
+  }
+
+  .analytics-map-label {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  .analytics-map-label-low {
+    left: auto;
+    right: 16px;
+    top: 16px;
+    bottom: auto;
+    color: var(--success);
+  }
+
+  .analytics-chip {
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .analytics-chip-hot {
+    background: rgba(122, 31, 43, 0.12);
+    color: var(--primary);
+  }
+
+  .analytics-chip-cool {
+    background: rgba(61, 107, 79, 0.12);
+    color: var(--success);
+  }
+
+  .analytics-chip-neutral {
+    background: rgba(58, 58, 58, 0.08);
+    color: var(--tertiary);
+  }
+
+  .analytics-reco {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    border-radius: 16px;
+    padding: 12px 14px;
+    background: var(--surface);
+  }
+
+  .analytics-action {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 16px;
+    background: rgba(122, 31, 43, 0.08);
+  }
+
+  .analytics-action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    background: rgba(122, 31, 43, 0.2);
+    color: var(--primary);
+  }
+
+  @keyframes analyticsPulse {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.85;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 0.45;
+    }
   }
 }

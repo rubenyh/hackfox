@@ -15,11 +15,13 @@ import {
   PanelLeftOpen,
   LogOut,
   UserCircle,
+  Sparkles,
 } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Activity },
   { href: "/routes", label: "Rutas", icon: TrendingUp },
+  { href: "/analytics", label: "Optimizacion", icon: Sparkles },
   { href: "/buses", label: "Buses", icon: Bus },
   { href: "/drivers", label: "Conductores", icon: UserCheck },
   { href: "/potholes", label: "Baches", icon: AlertTriangle },

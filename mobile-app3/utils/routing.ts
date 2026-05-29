@@ -1,5 +1,7 @@
 import { Route, RouteStop } from '@/hooks/use-routes';
 
+const GOOGLE_API_KEY = 'AIzaSyBcjPHiJqveQFzZ-qoIa_ojPgWxUZ436TE';
+
 export interface Destination {
   latitude: number;
   longitude: number;
@@ -13,6 +15,9 @@ export interface TransitRouteResult {
   walkFromBusDistance: number; // in km
   walkToBusPath: Destination[];
   walkFromBusPath: Destination[];
+  walkToBusTime: number; // in minutes
+  walkFromBusTime: number; // in minutes
+  estimatedBusTime: number; // in minutes
 }
 
 export function calculateDistance(
@@ -41,30 +46,104 @@ export function calculateDistance(
   return R * c; // distance in km
 }
 
-export function calculateTransitRoute(
+async function getWalkingRoute(origin: Destination, destination: Destination): Promise<{
+  distance: number;
+  time: number;
+  path: Destination[];
+} | null> {
+  try {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/directions/json?` +
+      `origin=${origin.latitude},${origin.longitude}&` +
+      `destination=${destination.latitude},${destination.longitude}&` +
+      `mode=walking&` +
+      `key=${GOOGLE_API_KEY}`
+    );
+
+    const data = await response.json();
+
+    if (data.routes && data.routes.length > 0) {
+      const route = data.routes[0];
+      const distanceMeters = route.legs[0].distance.value;
+      const durationSeconds = route.legs[0].duration.value;
+
+      const path = decodePolyline(route.overview_polyline.points);
+
+      return {
+        distance: distanceMeters / 1000, // convert to km
+        time: Math.ceil(durationSeconds / 60), // convert to minutes
+        path: path
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching walking route:', error);
+    return null;
+  }
+}
+
+function decodePolyline(encoded: string): Destination[] {
+  const points: Destination[] = [];
+  let index = 0, lat = 0, lon = 0;
+
+  while (index < encoded.length) {
+    let result = 0, shift = 0;
+    let c;
+
+    do {
+      c = encoded.charCodeAt(index++) - 63;
+      result |= (c & 0x1f) << shift;
+      shift += 5;
+    } while (c >= 0x20);
+
+    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+    result = 0;
+    shift = 0;
+
+    do {
+      c = encoded.charCodeAt(index++) - 63;
+      result |= (c & 0x1f) << shift;
+      shift += 5;
+    } while (c >= 0x20);
+
+    lon += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+    points.push({
+      latitude: lat / 1e5,
+      longitude: lon / 1e5
+    });
+  }
+
+  return points;
+}
+
+export async function calculateTransitRoute(
   userLocation: Destination,
   destination: Destination,
   routes: Route[]
-): TransitRouteResult | null {
+): Promise<TransitRouteResult | null> {
   if (routes.length === 0) return null;
 
   let bestRoute: Route | null = null;
   let bestOriginStop: RouteStop | null = null;
   let bestDestStop: RouteStop | null = null;
   let minTotalDistance = Infinity;
+  let bestWalkToBusData: Awaited<ReturnType<typeof getWalkingRoute>> = null;
+  let bestWalkFromBusData: Awaited<ReturnType<typeof getWalkingRoute>> = null;
 
   // Find the route that minimizes walking distance at both ends
-  routes.forEach(route => {
-    if (route.stops.length < 2) return;
+  for (const route of routes) {
+    if (route.stops.length < 2) continue;
 
-    // Simplification: Find nearest stop to user, and nearest stop to destination
+    // Find nearest stop to user, and nearest stop to destination
     let nearestOrigin = route.stops[0];
     let minOriginDist = Infinity;
-    
+
     let nearestDest = route.stops[route.stops.length - 1];
     let minDestDist = Infinity;
 
-    route.stops.forEach(stop => {
+    for (const stop of route.stops) {
       const distToUser = calculateDistance(userLocation, stop);
       if (distToUser < minOriginDist) {
         minOriginDist = distToUser;
@@ -76,40 +155,61 @@ export function calculateTransitRoute(
         minDestDist = distToDest;
         nearestDest = stop;
       }
-    });
+    }
 
-    const totalWalk = minOriginDist + minDestDist;
-    if (totalWalk < minTotalDistance) {
-      minTotalDistance = totalWalk;
+    // Get real walking distances from Google Directions API
+    const walkToBusData = await getWalkingRoute(
+      userLocation,
+      { latitude: nearestOrigin.lat, longitude: nearestOrigin.lon }
+    );
+    const walkFromBusData = await getWalkingRoute(
+      { latitude: nearestDest.lat, longitude: nearestDest.lon },
+      destination
+    );
+
+    const totalWalkDistance = (walkToBusData?.distance || minOriginDist) + (walkFromBusData?.distance || minDestDist);
+
+    if (totalWalkDistance < minTotalDistance) {
+      minTotalDistance = totalWalkDistance;
       bestRoute = route;
       bestOriginStop = nearestOrigin;
       bestDestStop = nearestDest;
+      bestWalkToBusData = walkToBusData;
+      bestWalkFromBusData = walkFromBusData;
     }
-  });
+  }
 
   if (!bestRoute || !bestOriginStop || !bestDestStop) {
-    // Failsafe para prototipo: Regresar la ruta 0 forzada
+    // Failsafe: return first route with dummy data
     bestRoute = routes[0];
     bestOriginStop = bestRoute.stops[0];
     bestDestStop = bestRoute.stops[bestRoute.stops.length - 1];
   }
 
-  const walkToBusDistance = calculateDistance(userLocation, bestOriginStop);
-  const walkFromBusDistance = calculateDistance(destination, bestDestStop);
+  // Calculate bus travel time (simple estimation based on route geometry)
+  let busTime = 15; // default fallback
+  if (bestRoute.geometry && bestRoute.geometry.length > 0) {
+    // Estimate 40 km/h average speed
+    const totalRouteKm = bestRoute.geometry.length * 0.00005; // rough distance estimate
+    busTime = Math.ceil(totalRouteKm / 0.67); // 40 km/h = 0.67 km/min
+  }
 
   return {
     route: bestRoute,
     originStop: bestOriginStop,
     destinationStop: bestDestStop,
-    walkToBusDistance,
-    walkFromBusDistance,
-    walkToBusPath: [
+    walkToBusDistance: bestWalkToBusData?.distance ?? calculateDistance(userLocation, bestOriginStop),
+    walkFromBusDistance: bestWalkFromBusData?.distance ?? calculateDistance(destination, bestDestStop),
+    walkToBusPath: bestWalkToBusData?.path ?? [
       userLocation,
       { latitude: bestOriginStop.lat, longitude: bestOriginStop.lon }
     ],
-    walkFromBusPath: [
+    walkFromBusPath: bestWalkFromBusData?.path ?? [
       { latitude: bestDestStop.lat, longitude: bestDestStop.lon },
       destination
-    ]
+    ],
+    walkToBusTime: bestWalkToBusData?.time ?? 10,
+    walkFromBusTime: bestWalkFromBusData?.time ?? 10,
+    estimatedBusTime: busTime
   };
 }

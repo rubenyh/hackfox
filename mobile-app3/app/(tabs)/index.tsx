@@ -10,7 +10,6 @@ import { useRoutes } from '@/hooks/use-routes';
 import { calculateTransitRoute, Destination, TransitRouteResult } from '@/utils/routing';
 import { ref, onValue } from 'firebase/database';
 import { rtdb } from '../../firebaseConfig';
-import { BusSimulator } from '@/components/BusSimulator';
 import { useGeocoding } from '@/hooks/use-geocoding';
 
 export default function MapScreen() {
@@ -86,7 +85,7 @@ export default function MapScreen() {
     }
   };
 
-  const handleMapPress = (e: any) => {
+  const handleMapPress = async (e: any) => {
     if (loading) return;
 
     const destination = {
@@ -97,17 +96,22 @@ export default function MapScreen() {
     setSelectedDestination(destination);
     setTransitRoute(null);
 
-    const routeResult = calculateTransitRoute(
-      { latitude: location.coords.latitude, longitude: location.coords.longitude },
-      destination,
-      routes
-    );
+    try {
+      const routeResult = await calculateTransitRoute(
+        { latitude: location.coords.latitude, longitude: location.coords.longitude },
+        destination,
+        routes
+      );
 
-    if (routeResult) {
-      setTransitRoute(routeResult);
-      announce(`Ruta calculada hacia destino.`);
-    } else {
-      announce('No se encontraron rutas disponibles');
+      if (routeResult) {
+        setTransitRoute(routeResult);
+        announce(`Ruta calculada hacia destino. Camina ${routeResult.walkToBusDistance.toFixed(1)} km.`);
+      } else {
+        announce('No se encontraron rutas disponibles');
+      }
+    } catch (error) {
+      console.error('Error calculating route:', error);
+      announce('Error al calcular la ruta');
     }
   };
 
@@ -132,12 +136,12 @@ export default function MapScreen() {
   const handleSelectSearchResult = async (result: typeof results[0]) => {
     // Sacamos los detalles (lat, lon) con el placeId
     const coords = await getPlaceDetails(result.placeId);
-    
+
     if (!coords) {
       announce('No se pudo obtener la ubicación exacta del lugar');
       return;
     }
-    
+
     const destination: Destination = {
       latitude: coords.latitude,
       longitude: coords.longitude,
@@ -149,26 +153,31 @@ export default function MapScreen() {
     setShowSearchResults(false);
     clearResults();
 
-    const routeResult = calculateTransitRoute(
-      { latitude: location.coords.latitude, longitude: location.coords.longitude },
-      destination,
-      routes
-    );
+    try {
+      const routeResult = await calculateTransitRoute(
+        { latitude: location.coords.latitude, longitude: location.coords.longitude },
+        destination,
+        routes
+      );
 
-    if (routeResult) {
-      setTransitRoute(routeResult);
-      announce(`Ruta calculada hacia ${result.name}.`);
-    } else {
-      announce(`No se encontraron rutas hacia ${result.name}`);
-    }
+      if (routeResult) {
+        setTransitRoute(routeResult);
+        announce(`Ruta calculada hacia ${result.name}.`);
+      } else {
+        announce(`No se encontraron rutas hacia ${result.name}`);
+      }
 
-    if (mapRef.current) {
-      mapRef.current.animateToRegion({
-        latitude: destination.latitude,
-        longitude: destination.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      }, 500);
+      if (mapRef.current) {
+        mapRef.current.animateToRegion({
+          latitude: destination.latitude,
+          longitude: destination.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error calculating route:', error);
+      announce('Error al calcular la ruta');
     }
   };
 
@@ -186,7 +195,6 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <BusSimulator />
       <View
         style={[styles.searchContainerWrapper, { top: insets.top + 16 }]}
         accessible={true}
@@ -401,17 +409,17 @@ export default function MapScreen() {
                   <Ionicons name="walk" size={24} color="#3498db" />
                   <View style={styles.itineraryText}>
                     <Text style={styles.stepTitle}>Camina hacia la Parada</Text>
-                    <Text style={styles.stepDesc}>{(transitRoute.walkToBusDistance * 1000).toFixed(0)} metros</Text>
+                    <Text style={styles.stepDesc}>{(transitRoute.walkToBusDistance * 1000).toFixed(0)} metros • {transitRoute.walkToBusTime} min</Text>
                   </View>
                 </View>
-                
+
                 <View style={styles.itineraryDivider} />
 
                 <View style={styles.itineraryStep}>
                   <Ionicons name="bus" size={24} color="#7A1F2B" />
                   <View style={styles.itineraryText}>
                     <Text style={styles.stepTitle}>Sube al: {transitRoute.route.name}</Text>
-                    <Text style={styles.stepDesc}>15 min estimados (IoT activo)</Text>
+                    <Text style={styles.stepDesc}>{transitRoute.estimatedBusTime} min estimados (IoT activo)</Text>
                   </View>
                 </View>
 
@@ -421,7 +429,7 @@ export default function MapScreen() {
                   <Ionicons name="walk" size={24} color="#3498db" />
                   <View style={styles.itineraryText}>
                     <Text style={styles.stepTitle}>Camina a tu destino</Text>
-                    <Text style={styles.stepDesc}>{(transitRoute.walkFromBusDistance * 1000).toFixed(0)} metros</Text>
+                    <Text style={styles.stepDesc}>{(transitRoute.walkFromBusDistance * 1000).toFixed(0)} metros • {transitRoute.walkFromBusTime} min</Text>
                   </View>
                 </View>
 
